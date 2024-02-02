@@ -114,6 +114,7 @@ export class DoublyLinkedList<T> {
 export interface SinglyLinkedNode<T> {
   value: T;
   next: SinglyLinkedNode<T> | undefined;
+  removed: boolean;
 }
 
 export class SinglyLinkedList<T> {
@@ -140,7 +141,8 @@ export class SinglyLinkedList<T> {
 
     const node = {
       value,
-      next: undefined
+      next: undefined,
+      removed: false
     };
 
     if (this.#head === undefined) {
@@ -151,6 +153,9 @@ export class SinglyLinkedList<T> {
   }
 
   remove(node: SinglyLinkedNode<T>, parent: SinglyLinkedNode<T> | undefined) {
+    if (node.removed) {
+      throw new Error("node already removed");
+    }
     --this.#length;
 
     if (this.#head === node) {
@@ -165,6 +170,8 @@ export class SinglyLinkedList<T> {
     } else {
       parent!.next = node.next;
     }
+
+    node.removed = true;
   }
 
   shift() {
@@ -177,6 +184,7 @@ export class SinglyLinkedList<T> {
       this.#head = node.next;
     }
 
+    node.removed = true;
     return node.value;
   }
 

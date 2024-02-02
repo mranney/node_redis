@@ -14,6 +14,7 @@ import HELLO, { HelloOptions } from '../commands/HELLO';
 import { ScanOptions, ScanCommonOptions } from '../commands/SCAN';
 import { RedisLegacyClient, RedisLegacyClientType } from './legacy-mode';
 import { RedisPoolOptions, RedisClientPool } from './pool';
+import { BasicClientSideCache, ClientSideCacheConfig, ClientSideCacheProvider } from './cache';
 
 export interface RedisClientOptions<
   M extends RedisModules = RedisModules,
@@ -69,6 +70,10 @@ export interface RedisClientOptions<
    * TODO
    */
   commandOptions?: CommandOptions<TYPE_MAPPING>;
+  /**
+   * TODO
+   */
+  clientSideCache?: ClientSideCacheProvider | ClientSideCacheConfig;
 }
 
 type WithCommands<
@@ -150,22 +155,39 @@ export default class RedisClient<
   static #createCommand(command: Command, resp: RespVersions) {
     const transformReply = getTransformReply(command, resp);
     return async function (this: ProxyClient, ...args: Array<unknown>) {
-      const redisArgs = command.transformArguments(...args),
-        reply = await this.sendCommand(redisArgs, this._commandOptions);
-      return transformReply ?
-        transformReply(reply, redisArgs.preserve) :
-        reply;
-    };
+      const redisArgs = command.transformArguments(...args);
+      const fn = () => { return this.sendCommand(redisArgs, this._commandOptions); };
+
+      // I think this would require fundamental changes, type mapping occurs in the sendCommand (before reply processing), 
+      // to support typemapping, we would have to cache the "resp" response, pre type mapping, and then every time, typemap
+      // it if neccessary, and then transform it.
+      const defaultTypeMapping = this._self.#options?.commandOptions === this._commandOptions
+
+      if (!defaultTypeMapping || !this._self.#clientSideCache) {
+        const reply = await fn();
+        return transformReply ? transformReply(reply, redisArgs.preserve) : reply;
+      } else {
+        const csc = this._self.#clientSideCache;
+        return await csc.handleCache(this._self, command, args, fn, transformReply, redisArgs.preserve);
+      }
+    }
   }
 
   static #createModuleCommand(command: Command, resp: RespVersions) {
     const transformReply = getTransformReply(command, resp);
     return async function (this: NamespaceProxyClient, ...args: Array<unknown>) {
-      const redisArgs = command.transformArguments(...args),
-        reply = await this._self.sendCommand(redisArgs, this._self._commandOptions);
-      return transformReply ?
-        transformReply(reply, redisArgs.preserve) :
-        reply;
+      const redisArgs = command.transformArguments(...args);
+      const fn = () => { return this._self.sendCommand(redisArgs, this._self._commandOptions); };
+
+      const defaultTypeMapping = this._self._self.#options?.commandOptions === this._self._commandOptions
+
+      if (!defaultTypeMapping || !this._self._self.#clientSideCache) {
+        const reply = await fn();
+        return transformReply ? transformReply(reply, redisArgs.preserve) : reply;
+      } else {
+        const csc = this._self._self.#clientSideCache;
+        return await csc.handleCache(this._self._self, command, args, fn, transformReply, redisArgs.preserve);
+      }
     };
   }
 
@@ -173,14 +195,22 @@ export default class RedisClient<
     const prefix = functionArgumentsPrefix(name, fn),
       transformReply = getTransformReply(fn, resp);
     return async function (this: NamespaceProxyClient, ...args: Array<unknown>) {
-      const fnArgs = fn.transformArguments(...args),
-        reply = await this._self.sendCommand(
+      const fnArgs = fn.transformArguments(...args);
+      const newFn = () => { return this._self.sendCommand(
           prefix.concat(fnArgs),
           this._self._commandOptions
         );
-      return transformReply ?
-        transformReply(reply, fnArgs.preserve) :
-        reply;
+      };
+
+      const defaultTypeMapping = this._self._self.#options?.commandOptions === this._self._commandOptions
+
+      if (!defaultTypeMapping || !this._self._self.#clientSideCache) {
+        const reply = await newFn();
+        return transformReply ? transformReply(reply, fnArgs.preserve) : reply;
+      } else {
+        const csc = this._self._self.#clientSideCache;
+        return await csc.handleCache(this._self._self, fn, args, newFn, transformReply, fnArgs.preserve);
+      }
     };
   }
 
@@ -189,11 +219,18 @@ export default class RedisClient<
       transformReply = getTransformReply(script, resp);
     return async function (this: ProxyClient, ...args: Array<unknown>) {
       const scriptArgs = script.transformArguments(...args),
-        redisArgs = prefix.concat(scriptArgs),
-        reply = await this.executeScript(script, redisArgs, this._commandOptions);
-      return transformReply ?
-        transformReply(reply, scriptArgs.preserve) :
-        reply;
+        redisArgs = prefix.concat(scriptArgs);
+      const fn = () =>  { return this.executeScript(script, redisArgs, this._commandOptions); };
+
+      const defaultTypeMapping = this._self._self.#options?.commandOptions === this._self._commandOptions
+
+      if (!defaultTypeMapping || !this._self.#clientSideCache) {
+        const reply = await fn();
+        return transformReply ? transformReply(reply, scriptArgs.preserve) : reply;
+      } else {
+        const csc = this._self.#clientSideCache;
+        return await csc.handleCache(this._self, script, args, fn, transformReply, scriptArgs.preserve);
+      }
     };
   }
 
@@ -279,6 +316,9 @@ export default class RedisClient<
   #monitorCallback?: MonitorCallback<TYPE_MAPPING>;
   private _self = this;
   private _commandOptions?: CommandOptions<TYPE_MAPPING>;
+  
+  #clientSideCache?: ClientSideCacheProvider;
+  #clearOnReconnect = false;
 
   get options(): RedisClientOptions<M, F, S, RESP> | undefined {
     return this._self.#options;
@@ -296,11 +336,26 @@ export default class RedisClient<
     return this._self.#queue.isPubSubActive;
   }
 
+  get socketEpoch() {
+    return this._self.#socket.socketEpoch;
+  }
+
   constructor(options?: RedisClientOptions<M, F, S, RESP, TYPE_MAPPING>) {
     super();
+
     this.#options = this.#initiateOptions(options);
     this.#queue = this.#initiateQueue();
     this.#socket = this.#initiateSocket();
+
+    if (options?.clientSideCache) {
+      if (options.clientSideCache instanceof ClientSideCacheProvider) {
+        this.#clientSideCache = options.clientSideCache;
+      } else {
+        const cscConfig = options.clientSideCache;
+        this.#clientSideCache = new BasicClientSideCache(cscConfig.ttl, cscConfig.maxEntries, cscConfig.lru);
+      }
+      this.#clearOnReconnect = this.#clientSideCache.clearOnReconnect();
+    }
   }
 
   #initiateOptions(options?: RedisClientOptions<M, F, S, RESP, TYPE_MAPPING>): RedisClientOptions<M, F, S, RESP, TYPE_MAPPING> | undefined {
@@ -334,7 +389,6 @@ export default class RedisClient<
 
   #handshake(selectedDB: number) {
     const commands = [];
-
     if (this.#options?.RESP) {
       const hello: HelloOptions = {};
 
@@ -377,6 +431,13 @@ export default class RedisClient<
       commands.push(
         COMMANDS.READONLY.transformArguments()
       );
+    }
+
+    if (this.#clientSideCache) {
+      const tracking = this.#clientSideCache.trackingOn();
+      if (tracking.length > 0) {
+        commands.push(tracking);
+      }
     }
 
     return commands;
@@ -432,6 +493,9 @@ export default class RedisClient<
       })
       .on('error', err => {
         this.emit('error', err);
+        if (this.#clearOnReconnect) {
+          this.#clientSideCache!.clear();
+        }
         if (this.#socket.isOpen && !this.#options?.disableOfflineQueue) {
           this.#queue.flushWaitingForReply(err);
         } else {

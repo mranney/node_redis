@@ -56,6 +56,8 @@ export default class RedisCommandsQueue {
     return this.#pubSub.isActive;
   }
 
+  #invalidateCallback?: (key: string) => unknown;
+
   constructor(
     respVersion: RespVersions,
     maxLength: number | null | undefined,
@@ -109,11 +111,25 @@ export default class RedisCommandsQueue {
       onErrorReply: err => this.#onErrorReply(err),
       onPush: push => {
         if (!this.#onPush(push)) {
-
+          switch (push[0].toString()) {
+            case "invalidate": {
+              console.log("invalidate push message");
+              if (this.#invalidateCallback) {
+                for (const key of push[1]) {
+                  this.#invalidateCallback(key.toString());
+                }
+              }
+              break;
+            }
+          }
         }
       },
       getTypeMapping: () => this.#getTypeMapping()
     });
+  }
+
+  setInvalidateCallback(callback?: (key: string) => unknown) {
+    this.#invalidateCallback = callback;
   }
 
   addCommand<T>(

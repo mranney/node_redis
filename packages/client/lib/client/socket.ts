@@ -84,6 +84,12 @@ export default class RedisSocket extends EventEmitter {
 
   #isSocketUnrefed = false;
 
+  #socketEpoch = 0;
+
+  get socketEpoch() {
+    return this.#socketEpoch;
+  }
+
   constructor(initiator: RedisSocketInitiator, options?: RedisSocketOptions) {
     super();
 
@@ -151,6 +157,7 @@ export default class RedisSocket extends EventEmitter {
           throw err;
         }
         this.#isReady = true;
+        this.#socketEpoch++;
         this.emit('ready');
       } catch (err) {
         const retryIn = this.#shouldReconnect(retries++, err as Error);
