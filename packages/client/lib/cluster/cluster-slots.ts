@@ -90,6 +90,18 @@ export type OnShardedChannelMovedError = (
     listeners?: ChannelListeners
 ) => void;
 
+type RedisClusterSlotsState<
+    M extends RedisModules,
+    F extends RedisFunctions,
+    S extends RedisScripts
+> = {
+    slots: Array<Shard<M, F, S>>;
+    shards: Array<Shard<M, F, S>>;
+    masters: Array<ShardNode<M, F, S>>;
+    replicas: Array<ShardNode<M, F, S>>;
+    randomNodeIterator?: IterableIterator<ShardNode<M, F, S>>;
+}
+
 export default class RedisClusterSlots<
     M extends RedisModules,
     F extends RedisFunctions,
@@ -100,12 +112,19 @@ export default class RedisClusterSlots<
     readonly #options: RedisClusterOptions<M, F, S>;
     readonly #Client: InstantiableRedisClient<M, F, S>;
     readonly #emit: EventEmitter['emit'];
-    slots = new Array<Shard<M, F, S>>(RedisClusterSlots.#SLOTS);
-    shards = new Array<Shard<M, F, S>>();
-    masters = new Array<ShardNode<M, F, S>>();
-    replicas = new Array<ShardNode<M, F, S>>();
+    
+    state: RedisClusterSlotsState<M, F, S> = {
+        slots: new Array(RedisClusterSlots.#SLOTS),
+        shards: [],
+        masters: [],
+        replicas: [],
+        randomNodeIterator: undefined
+    }
+
     readonly nodeByAddress = new Map<string, MasterNode<M, F, S> | ShardNode<M, F, S>>();
     pubSubNode?: PubSubNode<M, F, S>;
+
+    lastDiscovered = Date.now();
 
     #isOpen = false;
 
@@ -150,15 +169,24 @@ export default class RedisClusterSlots<
     }
 
     #resetSlots() {
-        this.slots = new Array(RedisClusterSlots.#SLOTS);
-        this.shards = [];
-        this.masters = [];
-        this.replicas = [];
-        this.#randomNodeIterator = undefined;
+        this.state = {
+            slots: new Array(RedisClusterSlots.#SLOTS),
+            shards: [],
+            masters: [],
+            replicas: [],
+            randomNodeIterator: undefined
+        }
     }
 
     async #discover(rootNode?: RedisClusterClientOptions) {
-        this.#resetSlots();
+        this.lastDiscovered = Date.now();
+        const newState: RedisClusterSlotsState<M, F, S> = {
+            slots: new Array(RedisClusterSlots.#SLOTS),
+            shards: [],
+            masters: [],
+            replicas: [],
+            randomNodeIterator: undefined,
+        }
         const addressesInUse = new Set<string>();
 
         try {
@@ -167,19 +195,19 @@ export default class RedisClusterSlots<
                 eagerConnect = this.#options.minimizeConnections !== true;
             for (const { from, to, master, replicas } of shards) {
                 const shard: Shard<M, F, S> = {
-                    master: this.#initiateSlotNode(master, false, eagerConnect, addressesInUse, promises)
+                    master: this.#initiateSlotNode(newState, master, false, eagerConnect, addressesInUse, promises)
                 };
 
                 if (this.#options.useReplicas) {
                     shard.replicas = replicas.map(replica =>
-                        this.#initiateSlotNode(replica, true, eagerConnect, addressesInUse, promises)
+                        this.#initiateSlotNode(newState,replica, true, eagerConnect, addressesInUse, promises)
                     );
                 }
 
-                this.shards.push(shard);
+                newState.shards.push(shard);
 
                 for (let i = from; i <= to; i++) {
-                    this.slots[i] = shard;
+                    newState.slots[i] = shard;
                 }
             }
 
@@ -197,7 +225,7 @@ export default class RedisClusterSlots<
 
                     if (channelsListeners.size || patternsListeners.size) {
                         promises.push(
-                            this.#initiatePubSubClient({
+                            this.#initiatePubSubClient(newState, {
                                 [PubSubType.CHANNELS]: channelsListeners,
                                 [PubSubType.PATTERNS]: patternsListeners
                             })
@@ -227,6 +255,7 @@ export default class RedisClusterSlots<
 
             await Promise.all(promises);
 
+            this.state = newState;
             return true;
         } catch (err) {
             this.#emit('error', err);
@@ -296,6 +325,7 @@ export default class RedisClusterSlots<
     }
 
     #initiateSlotNode(
+        state: RedisClusterSlotsState<M, F, S>,
         { id, ip, port }: ClusterSlotsNode,
         readonly: boolean,
         eagerConnent: boolean,
@@ -323,7 +353,7 @@ export default class RedisClusterSlots<
             this.nodeByAddress.set(address, node);
         }
 
-        (readonly ? this.replicas : this.masters).push(node);
+        (readonly ? state.replicas : state.masters).push(node);
 
         return node;
     }
@@ -392,7 +422,7 @@ export default class RedisClusterSlots<
         this.#isOpen = false;
 
         const promises = [];
-        for (const { master, replicas } of this.shards) {
+        for (const { master, replicas } of this.state.shards) {
             if (master.client) {
                 promises.push(
                     this.#execOnNodeClient(master.client, fn)
@@ -446,45 +476,43 @@ export default class RedisClusterSlots<
 
         const slotNumber = calculateSlot(firstKey);
         if (!isReadonly) {
-            return this.nodeClient(this.slots[slotNumber].master);
+            return this.nodeClient(this.state.slots[slotNumber].master);
         }
 
         return this.nodeClient(this.getSlotRandomNode(slotNumber));
     }
 
     *#iterateAllNodes() {
-        let i = Math.floor(Math.random() * (this.masters.length + this.replicas.length));
-        if (i < this.masters.length) {
+        let i = Math.floor(Math.random() * (this.state.masters.length + this.state.replicas.length));
+        if (i < this.state.masters.length) {
             do {
-                yield this.masters[i];
-            } while (++i < this.masters.length);
+                yield this.state.masters[i];
+            } while (++i < this.state.masters.length);
 
-            for (const replica of this.replicas) {
+            for (const replica of this.state.replicas) {
                 yield replica;
             }
         } else {
-            i -= this.masters.length;
+            i -= this.state.masters.length;
             do {
-                yield this.replicas[i];
-            } while (++i < this.replicas.length);
+                yield this.state.replicas[i];
+            } while (++i < this.state.replicas.length);
         }
 
         while (true) {
-            for (const master of this.masters) {
+            for (const master of this.state.masters) {
                 yield master;
             }
 
-            for (const replica of this.replicas) {
+            for (const replica of this.state.replicas) {
                 yield replica;
             }
         }
     }
 
-    #randomNodeIterator?: IterableIterator<ShardNode<M, F, S>>;
-
     getRandomNode() {
-        this.#randomNodeIterator ??= this.#iterateAllNodes();
-        return this.#randomNodeIterator.next().value as ShardNode<M, F, S>;
+        this.state.randomNodeIterator ??= this.#iterateAllNodes();
+        return this.state.randomNodeIterator.next().value as ShardNode<M, F, S>;
     }
 
     *#slotNodesIterator(slot: ShardWithReplicas<M, F, S>) {
@@ -505,7 +533,7 @@ export default class RedisClusterSlots<
     }
 
     getSlotRandomNode(slotNumber: number) {
-        const slot = this.slots[slotNumber];
+        const slot = this.state.slots[slotNumber];
         if (!slot.replicas?.length) {
             return slot.master;
         }
@@ -524,14 +552,14 @@ export default class RedisClusterSlots<
     getPubSubClient() {
         return this.pubSubNode ?
             this.pubSubNode.client :
-            this.#initiatePubSubClient();
+            this.#initiatePubSubClient(this.state);
     }
 
-    async #initiatePubSubClient(toResubscribe?: PubSubToResubscribe) {
-        const index = Math.floor(Math.random() * (this.masters.length + this.replicas.length)),
-            node = index < this.masters.length ?
-                this.masters[index] :
-                this.replicas[index - this.masters.length];
+    async #initiatePubSubClient(state: RedisClusterSlotsState<M,F,S>, toResubscribe?: PubSubToResubscribe) {
+        const index = Math.floor(Math.random() * (state.masters.length + state.replicas.length)),
+            node = index < state.masters.length ?
+                state.masters[index] :
+                state.replicas[index - state.masters.length];
     
         this.pubSubNode = {
             address: node.address,
@@ -569,7 +597,7 @@ export default class RedisClusterSlots<
     }
 
     getShardedPubSubClient(channel: string) {
-        const { master } = this.slots[calculateSlot(channel)];
+        const { master } = this.state.slots[calculateSlot(channel)];
         return master.pubSubClient ?? this.#initiateShardedPubSubClient(master);
     }
 
@@ -607,7 +635,7 @@ export default class RedisClusterSlots<
         channel: string,
         unsubscribe: (client: RedisClientType<M, F, S>) => Promise<void>
     ): Promise<void> {
-        const { master } = this.slots[calculateSlot(channel)];
+        const { master } = this.state.slots[calculateSlot(channel)];
         if (!master.pubSubClient) return Promise.resolve();
 
         const client = await master.pubSubClient;

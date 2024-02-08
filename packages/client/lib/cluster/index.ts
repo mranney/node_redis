@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import RedisClusterMultiCommand, { InstantiableRedisClusterMultiCommandType, RedisClusterMultiCommandType } from './multi-command';
 import { RedisMultiQueuedCommand } from '../multi-command';
 import { PubSubListener } from '../client/pub-sub';
-import { ErrorReply } from '../errors';
+import { ClientClosedError, ErrorReply, ConnectionTimeoutError } from '../errors';
 
 export type RedisClusterClientOptions = Omit<
     RedisClientOptions,
@@ -100,19 +100,19 @@ export default class RedisCluster<
     readonly #slots: RedisClusterSlots<M, F, S>;
 
     get slots() {
-        return this.#slots.slots;
+        return this.#slots.state.slots;
     }
 
     get shards() {
-        return this.#slots.shards;
+        return this.#slots.state.shards;
     }
 
     get masters() {
-        return this.#slots.masters;
+        return this.#slots.state.masters;
     }
 
     get replicas() {
-        return this.#slots.replicas;
+        return this.#slots.state.replicas;
     }
 
     get nodeByAddress() {
@@ -243,12 +243,33 @@ export default class RedisCluster<
         isReadonly: boolean | undefined,
         executor: (client: RedisClientType<M, F, S>) => Promise<Reply>
     ): Promise<Reply> {
+        if (this.#slots.lastDiscovered + 10000 < Date.now()) {
+            const discover = async () => {
+                let client = await this.#slots.nodeClient(this.#slots.getRandomNode());
+                this.#slots.rediscover(client).catch(() => { /* ignore */ })
+            }
+            discover(); // don't wait for it
+        }
         const maxCommandRedirections = this.#options.maxCommandRedirections ?? 16;
         let client = await this.#slots.getClient(firstKey, isReadonly);
         for (let i = 0;; i++) {
             try {
                 return await executor(client);
             } catch (err) {
+                if (err instanceof ClientClosedError) {
+                    i-- // don't count this attempt
+
+                    // attempt to reconnect closed client
+                    client.connect().catch(() => { /* ignore */ });
+
+                    // try again with a different client
+                    let oldClient = client
+                    while (client === oldClient) {
+                        client = await this.#slots.getClient(undefined, isReadonly)
+                    }
+                    continue;
+                }
+
                 if (++i > maxCommandRedirections || !(err instanceof ErrorReply)) {
                     throw err;
                 }
