@@ -6,7 +6,8 @@ export enum ClientKillFilters {
     ID = 'ID',
     TYPE = 'TYPE',
     USER = 'USER',
-    SKIP_ME = 'SKIPME'
+    SKIP_ME = 'SKIPME',
+    MAX_AGE = 'MAXAGE'
 }
 
 interface KillFilter<T extends ClientKillFilters> {
@@ -37,7 +38,11 @@ type KillSkipMe = ClientKillFilters.SKIP_ME | (KillFilter<ClientKillFilters.SKIP
     skipMe: boolean;
 });
 
-type KillFilters = KillAddress | KillLocalAddress | KillId | KillType | KillUser | KillSkipMe;
+interface KillMaxAge extends KillFilter<ClientKillFilters.MAX_AGE> {
+    maxAge: number;
+}
+
+type KillFilters = KillAddress | KillLocalAddress | KillId | KillType | KillUser | KillSkipMe | KillMaxAge;
 
 export function transformArguments(filters: KillFilters | Array<KillFilters>): RedisCommandArguments {
     const args = ['CLIENT', 'KILL'];
@@ -61,7 +66,7 @@ function pushFilter(args: RedisCommandArguments, filter: KillFilters): void {
 
     args.push(filter.filter);
 
-    switch(filter.filter) {
+    switch (filter.filter) {
         case ClientKillFilters.ADDRESS:
             args.push(filter.address);
             break;
@@ -83,11 +88,15 @@ function pushFilter(args: RedisCommandArguments, filter: KillFilters): void {
             break;
 
         case ClientKillFilters.USER:
-                args.push(filter.username);
-                break;
+            args.push(filter.username);
+            break;
 
         case ClientKillFilters.SKIP_ME:
             args.push(filter.skipMe ? 'yes' : 'no');
+            break;
+
+        case ClientKillFilters.MAX_AGE:
+            args.push(filter.maxAge.toString());
             break;
     }
 }

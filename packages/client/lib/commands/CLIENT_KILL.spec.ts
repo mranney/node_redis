@@ -106,5 +106,15 @@ describe('CLIENT KILL', () => {
                 ['CLIENT', 'KILL', 'TYPE', 'master', 'SKIPME']
             );
         });
+
+        it('MAX_AGE', () => {
+            assert.deepEqual(
+                transformArguments({
+                    filter: ClientKillFilters.MAX_AGE,
+                    maxAge: 5
+                }),
+                ['CLIENT', 'KILL', 'MAXAGE', '5']
+            );
+        });
     });
 });
