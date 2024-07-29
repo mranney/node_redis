@@ -88,6 +88,7 @@ import * as LATENCY_DOCTOR from '../commands/LATENCY_DOCTOR';
 import * as LATENCY_GRAPH from '../commands/LATENCY_GRAPH';
 import * as LATENCY_HISTORY from '../commands/LATENCY_HISTORY';
 import * as LATENCY_LATEST from '../commands/LATENCY_LATEST';
+import * as LATENCY_RESET from '../commands/LATENCY_RESET';
 import * as LOLWUT from '../commands/LOLWUT';
 import * as MEMORY_DOCTOR from '../commands/MEMORY_DOCTOR';
 import * as MEMORY_MALLOC_STATS from '../commands/MEMORY_MALLOC-STATS';
@@ -303,6 +304,8 @@ export default {
     latencyHistory: LATENCY_HISTORY,
     LATENCY_LATEST,
     latencyLatest: LATENCY_LATEST,
+    LATENCY_RESET,
+    latencyReset: LATENCY_RESET,
     LOLWUT,
     lolwut: LOLWUT,
     MEMORY_DOCTOR,
