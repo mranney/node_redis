@@ -412,7 +412,7 @@ export interface EvalOptions {
     arguments?: Array<string>;
 }
 
-export function evalFirstKeyIndex(options?: EvalOptions): string | undefined {
+export function evalFirstKeyIndex(_: unknown, options?: EvalOptions): string | undefined {
     return options?.keys?.[0];
 }
 
