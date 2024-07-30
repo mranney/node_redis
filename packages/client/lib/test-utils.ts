@@ -5,7 +5,7 @@ import { promiseTimeout } from './utils';
 const utils = new TestUtils({
   dockerImageName: 'redis',
   dockerImageVersionArgument: 'redis-version',
-  defaultDockerVersion: '7.4-rc2'
+  defaultDockerVersion: '7.4'
 });
 
 export default utils;
