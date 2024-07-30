@@ -37,7 +37,7 @@ node-redis is a modern, high performance [Redis](https://redis.io) client for No
 | [@redis/search](./packages/search)           | [![Downloads](https://img.shields.io/npm/dm/@redis/search.svg)](https://www.npmjs.com/package/@redis/search) [![Version](https://img.shields.io/npm/v/@redis/search.svg)](https://www.npmjs.com/package/@redis/search) [![Docs](https://img.shields.io/badge/-documentation-dc382c)](https://redis.js.org/documentation/search/) [RediSearch](https://oss.redis.com/redisearch/) commands                                    |
 | [@redis/time-series](./packages/time-series) | [![Downloads](https://img.shields.io/npm/dm/@redis/time-series.svg)](https://www.npmjs.com/package/@redis/time-series) [![Version](https://img.shields.io/npm/v/@redis/time-series.svg)](https://www.npmjs.com/package/@redis/time-series) [![Docs](https://img.shields.io/badge/-documentation-dc382c)](https://redis.js.org/documentation/time-series/) [Redis Time-Series](https://oss.redis.com/redistimeseries/) commands |
 
-> :warning: In version 4.1.0 we moved our subpackages from `@node-redis` to `@redis`. If you're just using `npm install redis`, you don't need to do anything—it'll upgrade automatically. If you're using the subpackages directly, you'll need to point to the new scope (e.g. `@redis/client` instead of `@node-redis/client`).
+> :warning: In version 4.1.0, we moved our subpackages from `@node-redis` to `@redis`. If you're just using `npm install redis`, you don't need to do anything—it'll upgrade automatically. If you're using the subpackages directly, you'll need to point to the new scope (e.g. `@redis/client` instead of `@node-redis/client`).
 
 ## Installation
 
@@ -127,7 +127,7 @@ await client.hGetAll(
 
 ### Unsupported Redis Commands
 
-If you want to run commands and/or use arguments that Node Redis doesn't know about (yet!) use `.sendCommand()`:
+If you want to run commands and/or use arguments that Node Redis doesn't know about (yet!), use `.sendCommand()`:
 
 ```typescript
 await client.sendCommand(['SET', 'key', 'value', 'NX']); // 'OK'
@@ -290,7 +290,7 @@ await client.add('key', 2); // 3
 
 ### Disconnecting
 
-There are two functions that disconnect a client from the Redis server. In most scenarios you should use `.quit()` to ensure that pending commands are sent to Redis before closing a connection.
+There are two functions that disconnect a client from the Redis server. In most scenarios, you should use `.quit()` to ensure that pending commands are sent to Redis before closing a connection.
 
 #### `.QUIT()`/`.quit()`
 
@@ -327,7 +327,7 @@ client.set('Tm9kZSBSZWRpcw==', 'users:1');
 client.sAdd('users:1:tokens', 'Tm9kZSBSZWRpcw==');
 ```
 
-Of course, if you don't do something with your Promises you're certain to get [unhandled Promise exceptions](https://nodejs.org/api/process.html#process_event_unhandledrejection). To take advantage of auto-pipelining and handle your Promises, use `Promise.all()`.
+Of course, if you don't do something with your Promises, you're certain to get [unhandled Promise exceptions](https://nodejs.org/api/process.html#process_event_unhandledrejection). To take advantage of auto-pipelining and handle your Promises, use `Promise.all()`.
 
 ```typescript
 await Promise.all([

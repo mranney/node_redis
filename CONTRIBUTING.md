@@ -61,7 +61,7 @@ To assist reviewers, we ask that you fill out the pull request template as much 
 
 Pull Requests to the protected branches require peer-review approvals and passing status checks to be able to be merged.
 
-When reviewing a Pull Request please check the following steps as well as the existing automated checks:
+When reviewing a Pull Request, please check the following steps as well as the existing automated checks:
 
 - Does your Pull Request provide or update the docs if docs changes are required?
 - Have the tests been updated or new tests been added to test any newly implemented or changed functionality?

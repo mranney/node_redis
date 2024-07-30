@@ -34,7 +34,7 @@ When the socket closes unexpectedly (without calling `.quit()`/`.disconnect()`),
 2. `number` -> wait for `X` milliseconds before reconnecting.
 3. `(retries: number, cause: Error) => false | number | Error` -> `number` is the same as configuring a `number` directly, `Error` is the same as `false`, but with a custom error.
 
-By default the strategy is `Math.min(retries * 50, 500)`, but it can be overwritten like so:
+By default, the strategy is `Math.min(retries * 50, 500)`, but it can be overwritten like so:
 
 ```javascript
 createClient({
@@ -48,7 +48,7 @@ createClient({
 
 To enable TLS, set `socket.tls` to `true`. Below are some basic examples.
 
-> For configuration options see [tls.connect](https://nodejs.org/api/tls.html#tlsconnectoptions-callback) and [tls.createSecureContext](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions), as those are the underlying functions used by this library.
+> For configuration options, see [tls.connect](https://nodejs.org/api/tls.html#tlsconnectoptions-callback) and [tls.createSecureContext](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions), as those are the underlying functions used by this library.
 
 ### Create a SSL client
 

@@ -16,7 +16,7 @@ The configuration object passed to `createClient` has changed significantly with
 
 ### No Auto Connect
 
-In V4, the client does not automatically connect to the server. Instead you need to run `.connect()` after creating the client or you will receive an error: `ClientClosedError: The client is closed`.
+In V4, the client does not automatically connect to the server. Instead, you need to run `.connect()` after creating the client or you will receive an error: `ClientClosedError: The client is closed`.
 
 ```typescript
 import { createClient } from 'redis';
@@ -50,9 +50,9 @@ In V4, you don't need to add a listener to the `message`-like events (items 5 to
 
 The second argument of these commands is a callback, which will be triggered every time there is a message published to the channel.
 
-The third argument to these commands is a boolean to set `bufferMode` (default `false`).  If it's set to `true` you will receive a buffer instead of a string.
+The third argument to these commands is a boolean to set `bufferMode` (default `false`).  If it's set to `true`, you will receive a buffer instead of a string.
 
-The `subscribe`-like commands return a promise. If the command is executed successfully the promise will be fulfilled, otherwise the promise will be rejected.
+The `subscribe`-like commands return a promise. If the command is executed successfully, the promise will be fulfilled, otherwise the promise will be rejected.
 
 ```typescript
 import { createClient } from 'redis';

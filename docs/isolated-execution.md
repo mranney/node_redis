@@ -8,7 +8,7 @@ Sometimes you want to run your commands on an exclusive connection. There are a 
 
 Below are several examples of how to use isolated execution.
 
-> NOTE: Behind the scenes we're using [`generic-pool`](https://www.npmjs.com/package/generic-pool) to provide a pool of connections that can be isolated. Go there to learn more.
+> NOTE: Behind the scenes, we're using [`generic-pool`](https://www.npmjs.com/package/generic-pool) to provide a pool of connections that can be isolated. Go there to learn more.
 
 ## The Simple Scenario
 
@@ -23,7 +23,7 @@ await client.executeIsolated(async isolatedClient => {
 
 ## Transactions
 
-Things get a little more complex with transactions. Here we are `.watch()`ing some keys. If the keys change during the transaction, a `WatchError` is thrown when `.exec()` is called:
+Things get a little more complex with transactions. Here, we are `.watch()`ing some keys. If the keys change during the transaction, a `WatchError` is thrown when `.exec()` is called:
 
 ```typescript
 try {
