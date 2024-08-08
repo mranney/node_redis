@@ -73,11 +73,14 @@ export type SearchRawReply = Array<any>;
 export function transformReply(reply: SearchRawReply, withoutDocuments: boolean): SearchReply {
     const documents = [];
     let i = 1;
+
     while (i < reply.length) {
         documents.push({
-            id: reply[i++],
-            value: withoutDocuments ? Object.create(null) : documentValue(reply[i++])
+            id: reply[i],
+            value: withoutDocuments || reply[i+1] == null ? Object.create(null) : documentValue(reply[i+1])
         });
+
+        i += 2;
     }
 
     return {
