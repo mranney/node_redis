@@ -8,17 +8,17 @@ export type MSetArguments =
     Record<string, RedisCommandArgument>;
 
 export function transformArguments(toSet: MSetArguments): RedisCommandArguments {
-    const args: RedisCommandArguments = ['MSET'];
 
     if (Array.isArray(toSet)) {
-        args.push(...toSet.flat());
+        return ['MSET', ...toSet.flat()]
     } else {
+        const args: RedisCommandArguments = ['MSET'];
         for (const key of Object.keys(toSet)) {
             args.push(key, toSet[key]);
         }
+        return args;
     }
 
-    return args;
 }
 
 export declare function transformReply(): RedisCommandArgument;
