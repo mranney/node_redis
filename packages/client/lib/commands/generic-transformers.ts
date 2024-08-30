@@ -321,6 +321,10 @@ export function pushGeoRadiusArguments(
         args.push(options.SORT);
     }
 
+    if (options?.WITHDIST) {
+        args.push(options.WITHDIST);
+    }
+
     pushGeoCountArgument(args, options?.COUNT);
 
     return args;
