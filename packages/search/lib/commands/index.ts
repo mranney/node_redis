@@ -547,7 +547,7 @@ export function pushSearchOptions(
         );
     }
 
-    if (options?.PARAMS) {
+    if (options?.PARAMS && Object.keys(options.PARAMS).length > 0) {
         pushParamsArgs(args, options.PARAMS);
     }
 
@@ -625,7 +625,7 @@ interface ProfileData {
     iteratorsProfile: IteratorsProfile
 }
 
-export function transformProfile(reply: Array<any>): ProfileData{
+export function transformProfile(reply: Array<any>): ProfileData {
     return {
         totalProfileTime: reply[0][1],
         parsingTime: reply[1][1],
@@ -637,7 +637,7 @@ export function transformProfile(reply: Array<any>): ProfileData{
 function transformIterators(IteratorsProfile: Array<any>): IteratorsProfile {
     var res: IteratorsProfile = {};
     for (let i = 0; i < IteratorsProfile.length; i += 2) {
-        const value = IteratorsProfile[i+1];
+        const value = IteratorsProfile[i + 1];
         switch (IteratorsProfile[i]) {
             case 'Type':
                 res.type = value;
@@ -663,7 +663,7 @@ function transformIterators(IteratorsProfile: Array<any>): IteratorsProfile {
 function transformChildIterators(IteratorsProfile: Array<any>): ChildIterator {
     var res: ChildIterator = {};
     for (let i = 1; i < IteratorsProfile.length; i += 2) {
-        const value = IteratorsProfile[i+1];
+        const value = IteratorsProfile[i + 1];
         switch (IteratorsProfile[i]) {
             case 'Type':
                 res.type = value;

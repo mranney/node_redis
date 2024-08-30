@@ -217,6 +217,12 @@ describe('SEARCH', () => {
         it('with PARAMS', () => {
             assert.deepEqual(
                 transformArguments('index', 'query', {
+                    PARAMS: {}
+                }),
+                ['FT.SEARCH', 'index', 'query']
+            );
+            assert.deepEqual(
+                transformArguments('index', 'query', {
                     PARAMS: {
                         param: 'value'
                     }
