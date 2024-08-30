@@ -185,7 +185,7 @@ export function pushDuplicatePolicy(args: RedisCommandArguments, duplicatePolicy
 export type RawLabels = Array<[label: string, value: string]>;
 
 export type Labels = {
-    [label: string]: string;
+    [label: string]: string | Array<string>;
 };
 
 export function transformLablesReply(reply: RawLabels): Labels {
@@ -203,7 +203,13 @@ export function pushLabelsArgument(args: RedisCommandArguments, labels?: Labels)
         args.push('LABELS');
 
         for (const [label, value] of Object.entries(labels)) {
-            args.push(label, value);
+            if (Array.isArray(value)) {
+                for (const item of value) {
+                    args.push(label, item);
+                }
+            } else {
+                args.push(label, value);
+            }
         }
     }
 
