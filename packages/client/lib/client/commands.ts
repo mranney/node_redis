@@ -56,6 +56,7 @@ import * as CLUSTER_SET_CONFIG_EPOCH from '../commands/CLUSTER_SET-CONFIG-EPOCH'
 import * as CLUSTER_SETSLOT from '../commands/CLUSTER_SETSLOT';
 import * as CLUSTER_SLOTS from '../commands/CLUSTER_SLOTS';
 import * as COMMAND_COUNT from '../commands/COMMAND_COUNT';
+import * as COMMAND_DOCS from '../commands/COMMAND_DOCS';
 import * as COMMAND_GETKEYS from '../commands/COMMAND_GETKEYS';
 import * as COMMAND_GETKEYSANDFLAGS from '../commands/COMMAND_GETKEYSANDFLAGS';
 import * as COMMAND_INFO from '../commands/COMMAND_INFO';
@@ -239,6 +240,8 @@ export default {
     clusterSlots: CLUSTER_SLOTS,
     COMMAND_COUNT,
     commandCount: COMMAND_COUNT,
+    COMMAND_DOCS,
+    commandDocs: COMMAND_DOCS,
     COMMAND_GETKEYS,
     commandGetKeys: COMMAND_GETKEYS,
     COMMAND_GETKEYSANDFLAGS,
