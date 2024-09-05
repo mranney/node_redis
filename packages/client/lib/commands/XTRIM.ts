@@ -10,7 +10,7 @@ interface XTrimOptions {
 export function transformArguments(
     key: RedisCommandArgument,
     strategy: 'MAXLEN' | 'MINID',
-    threshold: number,
+    threshold: number | string,
     options?: XTrimOptions
 ): RedisCommandArguments {
     const args = ['XTRIM', key, strategy];
