@@ -58,7 +58,8 @@ describe('Client', () => {
                 {
                     socket: {
                         host: 'localhost',
-                        port: 6379
+                        port: 6379,
+                        tls: false
                     },
                     username: 'user',
                     password: 'secret',
@@ -103,8 +104,54 @@ describe('Client', () => {
                 {
                     socket: {
                         host: 'localhost',
+                        tls: false
                     }
                 }
+            );
+        });
+    });
+
+    describe('parseOptions', () => {
+        it('should throw error if tls socket option is set to true and the url protocol is "redis:"', () => {
+            assert.throws(
+                () => RedisClient.parseOptions({
+                    url: 'redis://localhost',
+                    socket: {
+                        tls: true
+                    }
+                }),
+                TypeError
+            );
+        });
+        it('should throw error if tls socket option is set to false and the url protocol is "rediss:"', () => {
+            assert.throws(
+                () => RedisClient.parseOptions({
+                    url: 'rediss://localhost',
+                    socket: {
+                        tls: false
+                    }
+                }),
+                TypeError
+            );
+        });
+        it('should not throw when tls socket option and url protocol matches"', () => {
+            assert.equal(
+                RedisClient.parseOptions({
+                    url: 'rediss://localhost',
+                    socket: {
+                        tls: true
+                    }
+                }).socket.tls,
+                true
+            );
+            assert.equal(
+                RedisClient.parseOptions({
+                    url: 'redis://localhost',
+                    socket: {
+                        tls: false
+                    }
+                }).socket.tls,
+                false
             );
         });
     });
