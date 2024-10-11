@@ -69,24 +69,43 @@ describe('FT.CREATE', () => {
             ['FT.CREATE', 'index', 'SCHEMA', 'field', 'TEXT', 'WITHSUFFIXTRIE']
           );
         });
+        it('with INDEXEMPTY', () => {
+          assert.deepEqual(
+            CREATE.transformArguments('index', {
+              field: {
+                type: SCHEMA_FIELD_TYPE.TEXT,
+                INDEXEMPTY: true
+              }
+            }),
+            ['FT.CREATE', 'index', 'SCHEMA', 'field', 'TEXT', 'INDEXEMPTY']
+          );
+        });  
       });
 
-      it('NUMERIC', () => {
-        assert.deepEqual(
-          CREATE.transformArguments('index', {
-            field: SCHEMA_FIELD_TYPE.NUMERIC
-          }),
-          ['FT.CREATE', 'index', 'SCHEMA', 'field', 'NUMERIC']
-        );
+      describe('NUMERIC', () => {
+        describe('transformArguments', () => {
+          it('no options', () => {
+            assert.deepEqual(
+              CREATE.transformArguments('index', {
+                field: SCHEMA_FIELD_TYPE.NUMERIC
+              }),
+              ['FT.CREATE', 'index', 'SCHEMA', 'field', 'NUMERIC']
+            );
+          });
+        });
       });
 
-      it('GEO', () => {
-        assert.deepEqual(
-          CREATE.transformArguments('index', {
-            field: SCHEMA_FIELD_TYPE.GEO
-          }),
-          ['FT.CREATE', 'index', 'SCHEMA', 'field', 'GEO']
-        );
+      describe('GEO', () => {
+        describe('transformArguments', () => {
+          it('no options', () => {
+            assert.deepEqual(
+              CREATE.transformArguments('index', {
+                field: SCHEMA_FIELD_TYPE.GEO
+              }),
+              ['FT.CREATE', 'index', 'SCHEMA', 'field', 'GEO']
+            );
+          });
+        });
       });
 
       describe('TAG', () => {
@@ -147,6 +166,18 @@ describe('FT.CREATE', () => {
             ['FT.CREATE', 'index', 'SCHEMA', 'field', 'TAG', 'WITHSUFFIXTRIE']
           );
         });
+
+        it('with INDEXEMPTY', () => {
+          assert.deepEqual(
+            CREATE.transformArguments('index', {
+              field: {
+                type: SCHEMA_FIELD_TYPE.TAG,
+                INDEXEMPTY: true
+              }
+            }),
+            ['FT.CREATE', 'index', 'SCHEMA', 'field', 'TAG', 'INDEXEMPTY']
+          );
+        });  
       });
 
       describe('VECTOR', () => {
@@ -281,6 +312,18 @@ describe('FT.CREATE', () => {
         );
       });
     });
+
+    it('with INDEXMISSING', () => {
+      assert.deepEqual(
+        CREATE.transformArguments('index', {
+          field: {
+            type: SCHEMA_FIELD_TYPE.TEXT,
+            INDEXMISSING: true
+          }
+        }),
+        ['FT.CREATE', 'index', 'SCHEMA', 'field', 'TEXT', 'INDEXMISSING']
+      );
+    });  
 
     it('with ON', () => {
       assert.deepEqual(
