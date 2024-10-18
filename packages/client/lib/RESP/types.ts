@@ -1,3 +1,4 @@
+import { CommandParser } from '../client/parser';
 import { BlobError, SimpleError } from '../errors';
 import { RedisScriptConfig, SHA1 } from '../lua-script';
 import { RESP_TYPES } from './decoder';
@@ -272,6 +273,7 @@ export type Command = {
    */
   IS_FORWARD_COMMAND?: boolean;
   // POLICIES?: CommandPolicies;
+  parseCommand?(this: void, parser: CommandParser, ...args: Array<any>): void;
   transformArguments(this: void, ...args: Array<any>): CommandArguments;
   TRANSFORM_LEGACY_REPLY?: boolean;
   transformReply: TransformReply | Record<RespVersions, TransformReply>;

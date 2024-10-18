@@ -2,7 +2,7 @@ import { RedisArgument } from './types';
 
 const CRLF = '\r\n';
 
-export default function encodeCommand(args: Array<RedisArgument>): Array<RedisArgument> {
+export default function encodeCommand(args: ReadonlyArray<RedisArgument>): ReadonlyArray<RedisArgument> {
   const toWrite: Array<RedisArgument> = [];
 
   let strings = '*' + args.length + CRLF;

@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@redis/test-utils": "*",
+    "@types/node": "^20.12.2",
     "@types/sinon": "^17.0.3",
     "sinon": "^17.0.1"
   },

@@ -1,4 +1,5 @@
-import { UnwrapReply, ArrayReply, BlobStringReply, BooleanReply, CommandArguments, DoubleReply, NullReply, NumberReply, RedisArgument, TuplesReply } from '../RESP/types';
+import { UnwrapReply, ArrayReply, BlobStringReply, BooleanReply, CommandArguments, DoubleReply, NullReply, NumberReply, RedisArgument, TuplesReply, Command } from '../RESP/types';
+import { BasicCommandParser } from '../client/parser';
 
 export function isNullReply(reply: unknown): reply is NullReply {
   return reply === null;
@@ -445,4 +446,31 @@ function isPlainKey(key: RedisArgument | ZKeyAndWeight): key is RedisArgument {
 
 function isPlainKeys(keys: Array<RedisArgument> | Array<ZKeyAndWeight>): keys is Array<RedisArgument> {
   return isPlainKey(keys[0]);
+}
+
+/**
+ * @deprecated
+ */
+export function parseArgs(command: Command, ...args: Array<any>) {
+  if (command.parseCommand) {
+    const parser = new BasicCommandParser();
+    command.parseCommand!(parser, ...args);
+
+    const redisArgs: CommandArguments = parser.redisArgs;
+    if (parser.preserve) {
+      redisArgs.preserve = parser.preserve;
+    }
+    return redisArgs;
+  } else {
+    return command.transformArguments(...args);
+  }
+}
+
+/**
+ * @deprecated
+ */
+export function parseArgsWith(command: Command, ...args: Array<any>) {
+  const parser = new BasicCommandParser();
+  command.parseCommand!(parser, ...args);
+  return parser.preserve;
 }
