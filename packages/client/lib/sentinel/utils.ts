@@ -1,5 +1,5 @@
-import { BasicCommandParser } from '../client/parser';
 import { ArrayReply, Command, RedisFunction, RedisScript, RespVersions, UnwrapReply } from '../RESP/types';
+import { BasicCommandParser } from '../client/parser';
 import { RedisSocketOptions, RedisTcpSocketOptions } from '../client/socket';
 import { functionArgumentsPrefix, getTransformReply, scriptArgumentsPrefix } from '../commander';
 import { NamespaceProxySentinel, NamespaceProxySentinelClient, ProxySentinel, ProxySentinelClient, RedisNode } from './types';

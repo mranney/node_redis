@@ -4,6 +4,7 @@ import { CommandSignature, CommanderConfig, RedisFunctions, RedisModules, RedisS
 import COMMANDS from '../commands';
 import RedisSentinel, { RedisSentinelClient } from '.';
 import { RedisTcpSocketOptions } from '../client/socket';
+import { ClientSideCacheConfig, PooledClientSideCacheProvider } from '../client/cache';
 
 export interface RedisNode {
   host: string;
@@ -61,6 +62,10 @@ export interface RedisSentinelOptions<
    * When `false`, the sentinel object will wait for the first available client from the pool.
    */
   reserveClient?: boolean;
+  /**
+   * TODO
+   */
+  clientSideCache?: PooledClientSideCacheProvider | ClientSideCacheConfig;
 }
 
 export interface SentinelCommander<

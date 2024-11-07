@@ -29,12 +29,7 @@ export function parseGeoSearchArguments(
   from: GeoSearchFrom,
   by: GeoSearchBy,
   options?: GeoSearchOptions,
-  store?: RedisArgument
 ) {
-  if (store !== undefined) {
-    parser.pushKey(store);
-  }
-
   parser.pushKey(key);
 
   if (typeof from === 'string' || from instanceof Buffer) {

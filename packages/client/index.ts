@@ -20,6 +20,9 @@ import RedisSentinel from './lib/sentinel';
 export { RedisSentinelOptions, RedisSentinelType } from './lib/sentinel/types';
 export const createSentinel = RedisSentinel.create;
 
+import { BasicClientSideCache, BasicPooledClientSideCache } from './lib/client/cache';
+export { BasicClientSideCache, BasicPooledClientSideCache };
+
 // export { GeoReplyWith } from './lib/commands/generic-transformers';
 
 // export { SetOptions } from './lib/commands/SET';

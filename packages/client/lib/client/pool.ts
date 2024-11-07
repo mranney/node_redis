@@ -7,6 +7,7 @@ import { TimeoutError } from '../errors';
 import { attachConfig, functionArgumentsPrefix, getTransformReply, scriptArgumentsPrefix } from '../commander';
 import { CommandOptions } from './commands-queue';
 import RedisClientMultiCommand, { RedisClientMultiCommandType } from './multi-command';
+import { BasicPooledClientSideCache, ClientSideCacheConfig, PooledClientSideCacheProvider } from './cache';
 import { BasicCommandParser } from './parser';
 
 export interface RedisPoolOptions {
@@ -26,6 +27,10 @@ export interface RedisPoolOptions {
    * TODO
    */
   cleanupDelay: number;
+  /**
+   * TODO
+   */
+  clientSideCache?: PooledClientSideCacheProvider | ClientSideCacheConfig;
   /**
    * TODO
    */
@@ -117,7 +122,7 @@ export class RedisClientPool<
     RESP extends RespVersions,
     TYPE_MAPPING extends TypeMapping = {}
   >(
-    clientOptions?: RedisClientOptions<M, F, S, RESP, TYPE_MAPPING>,
+    clientOptions?: Omit<RedisClientOptions<M, F, S, RESP, TYPE_MAPPING>, "clientSideCache">,
     options?: Partial<RedisPoolOptions>
   ) {
     const Pool = attachConfig({
@@ -135,7 +140,7 @@ export class RedisClientPool<
     // returning a "proxy" to prevent the namespaces._self to leak between "proxies"
     return Object.create(
       new Pool(
-        RedisClient.factory(clientOptions).bind(undefined, clientOptions),
+        clientOptions,
         options
       )
     ) as RedisClientPoolType<M, F, S, RESP, TYPE_MAPPING>;
@@ -209,22 +214,41 @@ export class RedisClientPool<
     return this._self.#isClosing;
   }
 
+  #clientSideCache?: PooledClientSideCacheProvider;
+  get clientSideCache() {
+    return this._self.#clientSideCache;
+  }
+
   /**
    * You are probably looking for {@link RedisClient.createPool `RedisClient.createPool`},
    * {@link RedisClientPool.fromClient `RedisClientPool.fromClient`},
    * or {@link RedisClientPool.fromOptions `RedisClientPool.fromOptions`}...
    */
   constructor(
-    clientFactory: () => RedisClientType<M, F, S, RESP, TYPE_MAPPING>,
+    clientOptions?: RedisClientOptions<M, F, S, RESP, TYPE_MAPPING>,
     options?: Partial<RedisPoolOptions>
   ) {
     super();
 
-    this.#clientFactory = clientFactory;
     this.#options = {
       ...RedisClientPool.#DEFAULTS,
       ...options
     };
+    if (options?.clientSideCache) {
+      if (clientOptions === undefined) {
+        clientOptions = {};
+      }
+
+      if (options.clientSideCache instanceof PooledClientSideCacheProvider) {
+        this.#clientSideCache = clientOptions.clientSideCache = options.clientSideCache;
+      } else {
+        const cscConfig = options.clientSideCache;
+        this.#clientSideCache = clientOptions.clientSideCache = new BasicPooledClientSideCache(cscConfig);
+//        this.#clientSideCache = clientOptions.clientSideCache = new PooledNoRedirectClientSideCache(cscConfig);
+      }
+    }
+
+    this.#clientFactory = RedisClient.factory(clientOptions).bind(undefined, clientOptions) as () => RedisClientType<M, F, S, RESP, TYPE_MAPPING>;
   }
 
   private _self = this;
@@ -288,7 +312,6 @@ export class RedisClientPool<
 
   async connect() {
     if (this._self.#isOpen) return; // TODO: throw error?
-
     this._self.#isOpen = true;
 
     const promises = [];
@@ -298,11 +321,12 @@ export class RedisClientPool<
 
     try {
       await Promise.all(promises);
-      return this as unknown as RedisClientPoolType<M, F, S, RESP, TYPE_MAPPING>;
     } catch (err) {
       this.destroy();
       throw err;
     }
+
+    return this as unknown as RedisClientPoolType<M, F, S, RESP, TYPE_MAPPING>;
   }
 
   async #create() {
@@ -312,7 +336,8 @@ export class RedisClientPool<
     );
 
     try {
-      await node.value.connect();
+      const client = node.value;
+      await client.connect();
     } catch (err) {
       this._self.#clientsInUse.remove(node);
       throw err;
@@ -401,7 +426,8 @@ export class RedisClientPool<
     const toDestroy = Math.min(this.#idleClients.length, this.totalClients - this.#options.minimum);
     for (let i = 0; i < toDestroy; i++) {
       // TODO: shift vs pop
-      this.#idleClients.shift()!.destroy();
+      const client = this.#idleClients.shift()!
+      client.destroy();
     }
   }
 
@@ -439,8 +465,10 @@ export class RedisClientPool<
       for (const client of this._self.#clientsInUse) {
         promises.push(client.close());
       }
-  
+
       await Promise.all(promises);
+
+      this.#clientSideCache?.onPoolClose();
   
       this._self.#idleClients.reset();
       this._self.#clientsInUse.reset();
@@ -460,6 +488,9 @@ export class RedisClientPool<
     for (const client of this._self.#clientsInUse) {
       client.destroy();
     }
+
+    this._self.#clientSideCache?.onPoolClose();
+
     this._self.#clientsInUse.reset();
 
     this._self.#isOpen = false;

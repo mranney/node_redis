@@ -10,11 +10,12 @@ import { RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping, 
 import { promisify } from 'node:util';
 import { exec } from 'node:child_process';
 import { RESP_TYPES } from '../RESP/decoder';
-import { defineScript } from '../lua-script';
 import { MATH_FUNCTION } from '../commands/FUNCTION_LOAD.spec';
 import RedisBloomModules from '@redis/bloom';
+import { BasicPooledClientSideCache } from '../client/cache';
 import { RedisTcpSocketOptions } from '../client/socket';
 import { SQUARE_SCRIPT } from '../client/index.spec';
+import { once } from 'node:events';
 
 const execAsync = promisify(exec);
 
@@ -78,7 +79,7 @@ async function steadyState(frame: SentinelFramework) {
 }
 
 ["redis-sentinel-test-password", undefined].forEach(function (password) {
-  describe.skip(`Sentinel - password = ${password}`, () => {
+  describe(`Sentinel - password = ${password}`, () => {
     const config: RedisSentinelConfig = { sentinelName: "test", numberOfNodes: 3, password: password };
     const frame = new SentinelFramework(config);
     let tracer = new Array<string>();
@@ -1135,6 +1136,34 @@ async function steadyState(frame: SentinelFramework) {
         await frame.addNode();
         tracer.push("added node and waiting on added promise");
         await nodeAddedPromise; 
+      })
+
+      it('with client side caching', async function() {     
+        this.timeout(30000);
+        const csc = new BasicPooledClientSideCache();
+
+        sentinel = frame.getSentinelClient({nodeClientOptions: {RESP: 3}, clientSideCache: csc, masterPoolSize: 5});
+        await sentinel.connect();
+
+        await sentinel.set('x', 1);
+        await sentinel.get('x');
+        await sentinel.get('x');
+        await sentinel.get('x');
+        await sentinel.get('x');
+
+        assert.equal(1, csc.cacheMisses());
+        assert.equal(3, csc.cacheHits());
+
+        const invalidatePromise = once(csc, 'invalidate');
+        await sentinel.set('x', 2);
+        await invalidatePromise;
+        await sentinel.get('x');
+        await sentinel.get('x');
+        await sentinel.get('x');
+        await sentinel.get('x');
+
+        assert.equal(csc.cacheMisses(), 2);
+        assert.equal(csc.cacheHits(), 6);
       })
     })
   

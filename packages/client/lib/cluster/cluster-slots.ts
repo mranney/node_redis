@@ -6,6 +6,7 @@ import { ChannelListeners, PUBSUB_TYPE, PubSubTypeListeners } from '../client/pu
 import { RedisArgument, RedisFunctions, RedisModules, RedisScripts, RespVersions, TypeMapping } from '../RESP/types';
 import calculateSlot from 'cluster-key-slot';
 import { RedisSocketOptions } from '../client/socket';
+import { BasicPooledClientSideCache, PooledClientSideCacheProvider } from '../client/cache';
 
 interface NodeAddress {
   host: string;
@@ -111,6 +112,7 @@ export default class RedisClusterSlots<
   replicas = new Array<ShardNode<M, F, S, RESP, TYPE_MAPPING>>();
   readonly nodeByAddress = new Map<string, MasterNode<M, F, S, RESP, TYPE_MAPPING> | ShardNode<M, F, S, RESP, TYPE_MAPPING>>();
   pubSubNode?: PubSubNode<M, F, S, RESP, TYPE_MAPPING>;
+  clientSideCache?: PooledClientSideCacheProvider;
 
   #isOpen = false;
 
@@ -123,7 +125,16 @@ export default class RedisClusterSlots<
     emit: EventEmitter['emit']
   ) {
     this.#options = options;
-    this.#clientFactory = RedisClient.factory(options);
+    
+    if (options?.clientSideCache) {
+      if (options.clientSideCache instanceof PooledClientSideCacheProvider) {
+        this.clientSideCache = options.clientSideCache;
+      } else {
+        this.clientSideCache = new BasicPooledClientSideCache(options.clientSideCache)
+      }
+    }
+
+    this.#clientFactory = RedisClient.factory(this.#options);
     this.#emit = emit;
   }
 
@@ -164,6 +175,8 @@ export default class RedisClusterSlots<
   }
 
   async #discover(rootNode: RedisClusterClientOptions) {
+    this.clientSideCache?.clear();
+    this.clientSideCache?.disable();
     this.#resetSlots();
     try {
       const addressesInUse = new Set<string>(),
@@ -218,6 +231,7 @@ export default class RedisClusterSlots<
       }
 
       await Promise.all(promises);
+      this.clientSideCache?.enable();
 
       return true;
     } catch (err) {
@@ -313,6 +327,8 @@ export default class RedisClusterSlots<
   #createClient(node: ShardNode<M, F, S, RESP, TYPE_MAPPING>, readonly = node.readonly) {
     return this.#clientFactory(
       this.#clientOptionsDefaults({
+        clientSideCache: this.clientSideCache,
+        RESP: this.#options.RESP,
         socket: this.#getNodeAddress(node.address) ?? {
           host: node.host,
           port: node.port

@@ -188,18 +188,22 @@ export class SentinelFramework extends DockerBase {
     }
 
     const options: RedisSentinelOptions<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping> = {
+      ...opts,
       name: this.config.sentinelName,
       sentinelRootNodes: this.#sentinelList.map((sentinel) => { return { host: '127.0.0.1', port: sentinel.docker.port } }),
       passthroughClientErrorEvents: errors
     }
 
     if (this.config.password !== undefined) {
-      options.nodeClientOptions = {password: this.config.password};
-      options.sentinelClientOptions = {password: this.config.password};
-    }
+      if (!options.nodeClientOptions) {
+        options.nodeClientOptions = {};
+      }
+      options.nodeClientOptions.password = this.config.password;
 
-    if (opts) {
-      Object.assign(options, opts);
+      if (!options.sentinelClientOptions) {
+        options.sentinelClientOptions = {};
+      }
+      options.sentinelClientOptions = {password: this.config.password};
     }
 
     return RedisSentinel.create(options);

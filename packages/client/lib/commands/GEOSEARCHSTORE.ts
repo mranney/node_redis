@@ -17,7 +17,12 @@ export default {
     options?: GeoSearchStoreOptions
   ) {
     parser.push('GEOSEARCHSTORE');
-    parseGeoSearchArguments(parser, source, from, by, options, destination);
+
+    if (destination !== undefined) {
+      parser.pushKey(destination);
+    }
+  
+    parseGeoSearchArguments(parser, source, from, by, options);
 
     if (options?.STOREDIST) {
       parser.push('STOREDIST');

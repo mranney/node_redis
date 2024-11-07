@@ -33,6 +33,17 @@ export class BasicCommandParser implements CommandParser {
     return this.#keys[0];
   }
 
+  get cacheKey() {
+    const tmp = new Array(this.#redisArgs.length*2);
+
+    for (let i = 0; i < this.#redisArgs.length; i++) {
+      tmp[i] = this.#redisArgs[i].length;
+      tmp[i+this.#redisArgs.length] = this.#redisArgs[i];
+    }
+
+    return tmp.join('_');
+  }
+
   push(...arg: Array<RedisArgument>) {
     this.#redisArgs.push(...arg);
   };
