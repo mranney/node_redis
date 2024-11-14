@@ -167,10 +167,11 @@ result = await client.ft.search(
   '@model:Jigger',
   {
     LIMIT: {
-    from: 0,
-    size: 10
+      from: 0,
+      size: 10
+    }
   }
-});
+);
 
 console.log(JSON.stringify(result, null, 2));
 /*
