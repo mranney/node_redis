@@ -19,13 +19,12 @@ describe('PING', () => {
     });
   });
 
-  testUtils.testAll('ping', async client => {
+  testUtils.testWithClient('ping', async client => {
     assert.equal(
       await client.ping(),
       'PONG'
     );
   }, {
-    client: GLOBAL.SERVERS.OPEN,
-    cluster: GLOBAL.CLUSTERS.OPEN
+    ...GLOBAL.SERVERS.OPEN,
   });
 });

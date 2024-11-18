@@ -106,6 +106,10 @@ await pool.ping();
 
 See the [pool guide](./pool.md) for more information.
 
+## Cluster 'PING'
+
+in v4, `cluster.ping()` would send the ping command to a random node, in v5, this command is no longer available to the cluster client
+
 ## Cluster `MULTI`
 
 In v4, `cluster.multi()` did not support executing commands on replicas, even if they were readonly.
