@@ -56,6 +56,8 @@ export default class RedisCommandsQueue {
     return this.#pubSub.isActive;
   }
 
+  #pushHandlers: Map<string, (push: any[]) => unknown>;
+
   constructor(
     respVersion: RespVersions,
     maxLength: number | null | undefined,
@@ -65,6 +67,7 @@ export default class RedisCommandsQueue {
     this.#maxLength = maxLength;
     this.#onShardedChannelMoved = onShardedChannelMoved;
     this.decoder = this.#initiateDecoder();
+    this.#pushHandlers = new Map<string, () => unknown>();
   }
 
   #onReply(reply: ReplyUnion) {
@@ -109,11 +112,24 @@ export default class RedisCommandsQueue {
       onErrorReply: err => this.#onErrorReply(err),
       onPush: push => {
         if (!this.#onPush(push)) {
-
+          const handler = this.#pushHandlers.get(push[0].toString());
+          if (handler === undefined) {
+            return;
+          }
+          handler(push)
         }
       },
       getTypeMapping: () => this.#getTypeMapping()
     });
+  }
+
+  setPushCallback(type: string, callback?: (push: any[]) => unknown) {
+    if (callback === undefined) {
+      this.#pushHandlers.delete(type);
+      return;
+    }
+
+    this.#pushHandlers.set(type, callback);
   }
 
   addCommand<T>(
