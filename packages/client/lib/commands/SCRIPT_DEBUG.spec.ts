@@ -15,5 +15,8 @@ describe('SCRIPT DEBUG', () => {
       await client.scriptDebug('NO'),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

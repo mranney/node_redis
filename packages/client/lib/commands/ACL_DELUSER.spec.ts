@@ -26,5 +26,8 @@ describe('ACL DELUSER', () => {
       typeof await client.aclDelUser('user'),
       'number'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

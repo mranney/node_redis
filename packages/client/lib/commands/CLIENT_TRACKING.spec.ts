@@ -97,5 +97,10 @@ describe('CLIENT TRACKING', () => {
       await client.clientTracking(false),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    clientOptions: {
+      RESP: 3
+    }
+  });
 });

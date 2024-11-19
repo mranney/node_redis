@@ -100,7 +100,8 @@ describe('Client', () => {
         ...GLOBAL.SERVERS.PASSWORD.clientOptions,
         database: 2
       },
-      minimumDockerVersion: [6, 2]
+      minimumDockerVersion: [6, 2],
+      redisEnterpriseNotSupported: true,
     });
   });
 
@@ -278,7 +279,8 @@ describe('Client', () => {
       );
     }, {
       ...GLOBAL.SERVERS.OPEN,
-      minimumDockerVersion: [6, 2] // CLIENT INFO
+      minimumDockerVersion: [6, 2], // CLIENT INFO
+      redisEnterpriseNotSupported: true,
     });
 
     testUtils.testWithClient('should handle error replies (#2665)', async client => {
@@ -407,7 +409,8 @@ describe('Client', () => {
     );
   }, {
     ...GLOBAL.SERVERS.OPEN,
-    minimumDockerVersion: [6, 2] // CLIENT INFO
+    minimumDockerVersion: [6, 2], // CLIENT INFO
+    redisEnterpriseNotSupported: true,
   });
 
   testUtils.testWithClient('scanIterator', async client => {
@@ -750,7 +753,9 @@ describe('Client', () => {
         client.reset()
       ]);
       await assert.doesNotReject(client.ping());
-    }, GLOBAL.SERVERS.OPEN);
+    }, {
+      ...GLOBAL.SERVERS.OPEN,
+    });
 
     testUtils.testWithClient('should respect type mapping', async client => {
       const duplicate = await client.duplicate().connect(),

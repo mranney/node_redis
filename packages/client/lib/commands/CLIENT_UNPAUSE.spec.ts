@@ -17,5 +17,8 @@ describe('CLIENT UNPAUSE', () => {
       await client.clientUnpause(),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

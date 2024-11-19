@@ -13,6 +13,9 @@ describe('CLIENT INFO', () => {
   });
 
   testUtils.testWithClient('client.clientInfo', async client => {
+    //id=6463001000 addr=5.29.235.17:51462 laddr=10.0.1.6:19664 fd=171 name= age=3 idle=0 flags=N db=0 sub=0 psub=0 
+    //ssub=0 multi=-1 watch=0 obl=0 events=r cmd=client|list user=default resp=2 lib-name= lib-ver=
+
     const reply = await client.clientInfo();
     assert.equal(typeof reply.id, 'number');
     assert.equal(typeof reply.addr, 'string');
@@ -25,21 +28,25 @@ describe('CLIENT INFO', () => {
     assert.equal(typeof reply.db, 'number');
     assert.equal(typeof reply.sub, 'number');
     assert.equal(typeof reply.psub, 'number');
-    assert.equal(typeof reply.multi, 'number');
-    assert.equal(typeof reply.qbuf, 'number');
-    assert.equal(typeof reply.qbufFree, 'number');
-    assert.equal(typeof reply.argvMem, 'number');
+    assert.equal(typeof reply.multi, 'number');   
     assert.equal(typeof reply.obl, 'number');
-    assert.equal(typeof reply.oll, 'number');
-    assert.equal(typeof reply.omem, 'number');
-    assert.equal(typeof reply.totMem, 'number');
     assert.equal(typeof reply.events, 'string');
     assert.equal(typeof reply.cmd, 'string');
     assert.equal(typeof reply.user, 'string');
-    assert.equal(typeof reply.redir, 'number');
+    if (process.env.REDIS_ENTERPRISE === undefined) {
+      assert.equal(typeof reply.qbuf, 'number');
+      assert.equal(typeof reply.qbufFree, 'number');
+      assert.equal(typeof reply.argvMem, 'number');
+      assert.equal(typeof reply.oll, 'number');
+      assert.equal(typeof reply.omem, 'number');
+      assert.equal(typeof reply.totMem, 'number');
+      assert.equal(typeof reply.redir, 'number');
+    }
 
     if (testUtils.isVersionGreaterThan([7, 0])) {
-      assert.equal(typeof reply.multiMem, 'number');
+      if (process.env.REDIS_ENTERPRISE === undefined) {
+        assert.equal(typeof reply.multiMem, 'number');
+      }
       assert.equal(typeof reply.resp, 'number');
 
       if (testUtils.isVersionGreaterThan([7, 0, 3])) {

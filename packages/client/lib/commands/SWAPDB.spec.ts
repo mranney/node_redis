@@ -15,5 +15,8 @@ describe('SWAPDB', () => {
       await client.swapDb(0, 1),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

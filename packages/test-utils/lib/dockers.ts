@@ -94,11 +94,13 @@ async function dockerRemove(dockerId: string): Promise<void> {
 }
 
 after(() => {
-  return Promise.all(
-    [...RUNNING_SERVERS.values()].map(async dockerPromise =>
-      await dockerRemove((await dockerPromise).dockerId)
-    )
-  );
+  if (RUNNING_SERVERS.size != 0) {
+    return Promise.all(
+      [...RUNNING_SERVERS.values()].map(async dockerPromise =>
+        await dockerRemove((await dockerPromise).dockerId)
+      )
+    );
+  }
 });
 
 export interface RedisClusterDockersConfig extends RedisServerDockerConfig {
@@ -254,11 +256,13 @@ export function spawnRedisCluster(dockersConfig: RedisClusterDockersConfig, serv
 }
 
 after(() => {
-  return Promise.all(
-    [...RUNNING_CLUSTERS.values()].map(async dockersPromise => {
-      return Promise.all(
-        (await dockersPromise).map(({ dockerId }) => dockerRemove(dockerId))
-      );
-    })
-  );
+  if (RUNNING_CLUSTERS.size != 0) {
+    return Promise.all(
+      [...RUNNING_CLUSTERS.values()].map(async dockersPromise => {
+        return Promise.all(
+          (await dockersPromise).map(({ dockerId }) => dockerRemove(dockerId))
+        );
+      })
+    );
+  }
 });

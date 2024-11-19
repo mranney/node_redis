@@ -15,5 +15,8 @@ describe('MEMORY PURGE', () => {
       await client.memoryPurge(),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

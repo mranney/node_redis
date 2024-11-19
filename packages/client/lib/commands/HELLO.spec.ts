@@ -61,11 +61,15 @@ describe('HELLO', () => {
     assert.equal(typeof reply.version, 'string');
     assert.equal(reply.proto, 2);
     assert.equal(typeof reply.id, 'number');
-    assert.equal(reply.mode, 'standalone');
+    if (process.env.REDIS_ENTERPRISE === undefined) {
+      assert.equal(reply.mode, 'standalone');
+    } else {
+      assert.equal(reply.mode, 'cluster');
+    }
     assert.equal(reply.role, 'master');
     assert.deepEqual(reply.modules, []);
   }, {
     ...GLOBAL.SERVERS.OPEN,
-    minimumDockerVersion: [6, 2]
+    minimumDockerVersion: [6, 2],
   });
 });

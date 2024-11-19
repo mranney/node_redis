@@ -22,5 +22,8 @@ describe('LATENCY GRAPH', () => {
     ]);
 
     assert.equal(typeof reply, 'string');
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

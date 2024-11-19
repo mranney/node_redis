@@ -15,5 +15,8 @@ describe('MOVE', () => {
       await client.move('key', 1),
       0
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

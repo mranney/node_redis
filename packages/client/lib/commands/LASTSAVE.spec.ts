@@ -15,5 +15,8 @@ describe('LASTSAVE', () => {
       typeof await client.lastSave(),
       'number'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

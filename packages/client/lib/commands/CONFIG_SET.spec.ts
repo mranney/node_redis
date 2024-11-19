@@ -25,7 +25,7 @@ describe('CONFIG SET', () => {
 
   testUtils.testWithClient('client.configSet', async client => {
     assert.equal(
-      await client.configSet('maxmemory', '0'),
+      await client.configSet('lua-time-limit', '5000'),
       'OK'
     );
   }, GLOBAL.SERVERS.OPEN);

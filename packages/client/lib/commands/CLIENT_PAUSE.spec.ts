@@ -24,5 +24,8 @@ describe('CLIENT PAUSE', () => {
       await client.clientPause(0),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

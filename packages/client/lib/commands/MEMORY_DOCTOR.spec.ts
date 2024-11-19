@@ -15,5 +15,8 @@ describe('MEMORY DOCTOR', () => {
       typeof (await client.memoryDoctor()),
       'string'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

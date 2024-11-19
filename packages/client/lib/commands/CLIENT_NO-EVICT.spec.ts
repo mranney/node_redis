@@ -26,5 +26,8 @@ describe('CLIENT NO-EVICT', () => {
       await client.clientNoEvict(true),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

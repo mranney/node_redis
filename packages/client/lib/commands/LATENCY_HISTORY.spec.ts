@@ -22,5 +22,8 @@ describe('LATENCY HISTORY', () => {
       assert.equal(typeof timestamp, 'number');
       assert.equal(typeof latency, 'number');
     }
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

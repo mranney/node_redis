@@ -15,5 +15,8 @@ describe('MEMORY MALLOC-STATS', () => {
       typeof (await client.memoryMallocStats()),
       'string'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

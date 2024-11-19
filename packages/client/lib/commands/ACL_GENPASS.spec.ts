@@ -26,5 +26,8 @@ describe('ACL GENPASS', () => {
       typeof await client.aclGenPass(),
       'string'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

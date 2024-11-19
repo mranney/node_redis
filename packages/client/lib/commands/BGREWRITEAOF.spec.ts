@@ -15,5 +15,8 @@ describe('BGREWRITEAOF', () => {
       typeof await client.bgRewriteAof(),
       'string'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

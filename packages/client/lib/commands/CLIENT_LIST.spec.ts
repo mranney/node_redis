@@ -45,25 +45,33 @@ describe('CLIENT LIST', () => {
       assert.equal(typeof item.sub, 'number');
       assert.equal(typeof item.psub, 'number');
       assert.equal(typeof item.multi, 'number');
-      assert.equal(typeof item.qbuf, 'number');
-      assert.equal(typeof item.qbufFree, 'number');
       assert.equal(typeof item.obl, 'number');
-      assert.equal(typeof item.oll, 'number');
-      assert.equal(typeof item.omem, 'number');
       assert.equal(typeof item.events, 'string');
       assert.equal(typeof item.cmd, 'string');
-
+      if (process.env.REDIS_ENTERPRISE === undefined) {
+        assert.equal(typeof item.qbuf, 'number');
+        assert.equal(typeof item.qbufFree, 'number');
+        assert.equal(typeof item.oll, 'number');
+        assert.equal(typeof item.omem, 'number');
+      }
+      
       if (testUtils.isVersionGreaterThan([6, 0])) {
-        assert.equal(typeof item.argvMem, 'number');
-        assert.equal(typeof item.totMem, 'number');
+        if (process.env.REDIS_ENTERPRISE === undefined) {
+          assert.equal(typeof item.argvMem, 'number');
+          assert.equal(typeof item.totMem, 'number');
+        }
         assert.equal(typeof item.user, 'string');
         
         if (testUtils.isVersionGreaterThan([6, 2])) {
-          assert.equal(typeof item.redir, 'number');
+          if (process.env.REDIS_ENTERPRISE === undefined) {
+            assert.equal(typeof item.redir, 'number');
+          }
           assert.equal(typeof item.laddr, 'string');
           
           if (testUtils.isVersionGreaterThan([7, 0])) {
-            assert.equal(typeof item.multiMem, 'number');
+            if (process.env.REDIS_ENTERPRISE === undefined) {
+              assert.equal(typeof item.multiMem, 'number');
+            }
             assert.equal(typeof item.resp, 'number');
 
             if (testUtils.isVersionGreaterThan([7, 0, 3])) {

@@ -17,5 +17,8 @@ describe('ACL LOG RESET', () => {
       await client.aclLogReset(),
       'OK'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,  
+  });
 });

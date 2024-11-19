@@ -46,5 +46,8 @@ describe('ACL LOG', () => {
         assert.equal(typeof log['timestamp-last-updated'], 'number');
       }
     }
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

@@ -28,6 +28,8 @@ interface TestUtilsConfig {
 interface CommonTestOptions {
   serverArguments: Array<string>;
   minimumDockerVersion?: Array<number>;
+  debugRequired?: boolean;
+  redisEnterpriseNotSupported?: boolean;
 }
 
 interface ClientTestOptions<
@@ -163,28 +165,52 @@ export default class TestUtils {
     options: ClientTestOptions<M, F, S, RESP, TYPE_MAPPING>
   ): void {
     let dockerPromise: ReturnType<typeof spawnRedisServer>;
-    if (this.isVersionGreaterThan(options.minimumDockerVersion)) {
-      const dockerImage = this.#DOCKER_IMAGE;
-      before(function () {
-        this.timeout(30000);
 
-        dockerPromise = spawnRedisServer(dockerImage, options.serverArguments);
-        return dockerPromise;
-      });
+    if (process.env.REDIS_HOST === undefined) {
+      if (this.isVersionGreaterThan(options.minimumDockerVersion)) {
+        const dockerImage = this.#DOCKER_IMAGE;
+        before(function () {
+          this.timeout(30000);
+
+          dockerPromise = spawnRedisServer(dockerImage, options.serverArguments);
+          return dockerPromise;
+        });
+      }
     }
 
     it(title, async function () {
-      if (!dockerPromise) return this.skip();
+      let client: RedisClientType<any, any, any, any, any> | undefined;
 
-      const client = createClient({
-        ...options.clientOptions,
-        socket: {
-          ...options.clientOptions?.socket,
-          // TODO
-          // @ts-ignore
-          port: (await dockerPromise).port
+      if (process.env.REDIS_HOST === undefined) {
+        if (!dockerPromise) return this.skip();
+
+        client = createClient({
+          ...options.clientOptions,
+          socket: {
+            ...options.clientOptions?.socket,
+            // TODO
+            // @ts-ignore
+            port: (await dockerPromise).port
+          }
+        });
+      } else {
+        if (options.debugRequired) return this.skip();
+        if (process.env.REDIS_ENTERPRISE !== undefined) {
+          if (options.redisEnterpriseNotSupported) return this.skip();
         }
-      });
+        
+        client = createClient({
+          ...options.clientOptions,
+          password: process.env.REDIS_PASSWORD,
+          socket: {
+            ...options.clientOptions?.socket,
+            // TODO
+            // @ts-ignore
+            host: process.env.REDIS_HOST,
+            port: Number(process.env.REDIS_PORT!)
+          }
+        });
+      }
 
       if (options.disableClientSetup) {
         return fn(client);
@@ -216,28 +242,52 @@ export default class TestUtils {
     options: ClientPoolTestOptions<M, F, S, RESP, TYPE_MAPPING>
   ): void {
     let dockerPromise: ReturnType<typeof spawnRedisServer>;
-    if (this.isVersionGreaterThan(options.minimumDockerVersion)) {
-      const dockerImage = this.#DOCKER_IMAGE;
-      before(function () {
-        this.timeout(30000);
 
-        dockerPromise = spawnRedisServer(dockerImage, options.serverArguments);
-        return dockerPromise;
-      });
+    if (process.env.REDIS_HOST === undefined) {
+      if (this.isVersionGreaterThan(options.minimumDockerVersion)) {
+        const dockerImage = this.#DOCKER_IMAGE;
+        before(function () {
+          this.timeout(30000);
+
+          dockerPromise = spawnRedisServer(dockerImage, options.serverArguments);
+          return dockerPromise;
+        });
+      }
     }
 
     it(title, async function () {
-      if (!dockerPromise) return this.skip();
+      let pool: RedisClientPoolType<any, any, any, any, any> | undefined;
 
-      const pool = createClientPool({
-        ...options.clientOptions,
-        socket: {
-          ...options.clientOptions?.socket,
-          // TODO
-          // @ts-ignore
-          port: (await dockerPromise).port
+      if (process.env.REDIS_HOST === undefined) {
+        if (!dockerPromise) return this.skip();
+
+        pool = createClientPool({
+          ...options.clientOptions,
+          socket: {
+            ...options.clientOptions?.socket,
+            // TODO
+            // @ts-ignore
+            port: (await dockerPromise).port
+          }
+        }, options.poolOptions);
+      } else {
+        if (options.debugRequired) return this.skip();
+        if (process.env.REDIS_ENTERPRISE !== undefined) {
+          if (options.redisEnterpriseNotSupported) return this.skip();
         }
-      }, options.poolOptions);
+
+        pool = createClientPool({
+          ...options.clientOptions,
+          password: process.env.REDIS_PASSWORD,
+          socket: {
+            ...options.clientOptions?.socket,
+            // TODO
+            // @ts-ignore
+            host: process.env.REDIS_HOST,
+            port: Number(process.env.REDIS_PORT!)
+          }
+        }, options.poolOptions);
+      }
 
       await pool.connect();
 
@@ -280,6 +330,12 @@ export default class TestUtils {
     fn: (cluster: RedisClusterType<M, F, S, RESP, TYPE_MAPPING/*, POLICIES*/>) => unknown,
     options: ClusterTestOptions<M, F, S, RESP, TYPE_MAPPING/*, POLICIES*/>
   ): void {
+    if (process.env.REDIS_HOST !== undefined) {
+      it(title, async function () {
+        return this.skip();
+      });
+    }
+
     let dockersPromise: ReturnType<typeof spawnRedisCluster>;
     if (this.isVersionGreaterThan(options.minimumDockerVersion)) {
       const dockerImage = this.#DOCKER_IMAGE;

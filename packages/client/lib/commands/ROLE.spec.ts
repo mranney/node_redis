@@ -57,13 +57,13 @@ describe('ROLE', () => {
   });
 
   testUtils.testWithClient('client.role', async client => {
-    assert.deepEqual(
-      await client.role(),
-      {
-        role: 'master',
-        replicationOffest: 0,
-        replicas: []
-      }
-    );
+    const ret = await client.role();
+    assert.equal(ret!.role, 'master');
+    assert.equal(ret!.replicationOffest, 0);
+    if (process.env.REDIS_ENTERPRISE === undefined) {
+      assert.deepEqual(ret!.replicas, []);
+    } else {
+      assert(ret!.replicas.length > 0);
+    }
   }, GLOBAL.SERVERS.OPEN);
 });

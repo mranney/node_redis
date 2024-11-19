@@ -42,5 +42,8 @@ describe('MEMORY STATS', () => {
       assert.equal(typeof memoryStats['cluster.links'], 'number');
       assert.equal(typeof memoryStats['functions.caches'], 'number');
     }
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

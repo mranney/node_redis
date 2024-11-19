@@ -15,5 +15,8 @@ describe('LATENCY DOCTOR', () => {
       typeof await client.latencyDoctor(),
       'string'
     );
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });

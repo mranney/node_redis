@@ -955,22 +955,15 @@ export default class RedisClient<
    * Reset the client to its default state (i.e. stop PubSub, stop monitoring, select default DB, etc.)
    */
   async reset() {
-    const chainId = Symbol('Reset Chain'),
-      promises = [this._self.#queue.reset(chainId)],
-      selectedDB = this._self.#options?.database ?? 0;
-    for (const command of this._self.#handshake(selectedDB)) {
-      promises.push(
-        this._self.#queue.addCommand(command, {
-          chainId
-        })
-      );
-    }
-    this._self.#scheduleWrite();
-    await Promise.all(promises);
+    const selectedDB = this._self.#options?.database ?? 0;
+    this.destroy();
+
     this._self.#selectedDB = selectedDB;
     this._self.#monitorCallback = undefined;
     this._self.#dirtyWatch = undefined;
     this._self.#watchEpoch = undefined;
+
+    await this.connect();
   }
 
   /**

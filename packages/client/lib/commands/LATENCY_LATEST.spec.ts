@@ -23,5 +23,8 @@ describe('LATENCY LATEST', () => {
       assert.equal(typeof latestLatency, 'number');
       assert.equal(typeof allTimeLatency, 'number');
     }
-  }, GLOBAL.SERVERS.OPEN);
+  }, {
+    ...GLOBAL.SERVERS.OPEN,
+    redisEnterpriseNotSupported: true,
+  });
 });
