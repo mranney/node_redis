@@ -11,7 +11,7 @@ export type PUBSUB_TYPE = typeof PUBSUB_TYPE;
 
 export type PubSubType = PUBSUB_TYPE[keyof PUBSUB_TYPE];
 
-const COMMANDS = {
+export const COMMANDS = {
   [PUBSUB_TYPE.CHANNELS]: {
     subscribe: Buffer.from('subscribe'),
     unsubscribe: Buffer.from('unsubscribe'),
@@ -344,28 +344,37 @@ export class PubSub {
     return commands;
   }
 
+  handleMessageReplyChannel(push: ReadonlyArray<Buffer>) {
+    this.#emitPubSubMessage(
+      PUBSUB_TYPE.CHANNELS,
+      push[2],
+      push[1]
+    );
+  }
+
+  handleMessageReplyPattern(push: ReadonlyArray<Buffer>) {
+    this.#emitPubSubMessage(
+      PUBSUB_TYPE.PATTERNS,
+      push[3],
+      push[2],
+      push[1]
+    );
+  }
+
+  handleMessageReplySharded(push: ReadonlyArray<Buffer>) {
+    this.#emitPubSubMessage(
+      PUBSUB_TYPE.SHARDED,
+      push[2],
+      push[1]
+    );
+  }
+
   handleMessageReply(reply: Array<Buffer>): boolean {
     if (COMMANDS[PUBSUB_TYPE.CHANNELS].message.equals(reply[0])) {
-      this.#emitPubSubMessage(
-        PUBSUB_TYPE.CHANNELS,
-        reply[2],
-        reply[1]
-      );
       return true;
     } else if (COMMANDS[PUBSUB_TYPE.PATTERNS].message.equals(reply[0])) {
-      this.#emitPubSubMessage(
-        PUBSUB_TYPE.PATTERNS,
-        reply[3],
-        reply[2],
-        reply[1]
-      );
       return true;
     } else if (COMMANDS[PUBSUB_TYPE.SHARDED].message.equals(reply[0])) {
-      this.#emitPubSubMessage(
-        PUBSUB_TYPE.SHARDED,
-        reply[2],
-        reply[1]
-      );
       return true;
     }
 

@@ -271,7 +271,7 @@ export default class RedisSocket extends EventEmitter {
     });
   }
 
-  write(iterable: Iterable<Array<RedisArgument>>) {
+  write(iterable: Iterable<ReadonlyArray<RedisArgument>>) {
     if (!this.#socket) return;
     
     this.#socket.cork();

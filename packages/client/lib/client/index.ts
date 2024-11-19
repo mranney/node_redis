@@ -573,6 +573,14 @@ export default class RedisClient<
     return this as unknown as RedisClientType<M, F, S, RESP, TYPE_MAPPING>;
   }
 
+  addPushHandler(messageType: string, handler: (pushMsg: ReadonlyArray<any>) => unknown) {
+    return this._self.#queue.addPushHandler(messageType, handler);
+  }
+
+  removePushHandler(symbol: Symbol) {
+    this._self.#queue.removePushHandler(symbol);
+  }
+
   sendCommand<T = ReplyUnion>(
     args: Array<RedisArgument>,
     options?: CommandOptions

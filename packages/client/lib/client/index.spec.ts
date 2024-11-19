@@ -9,6 +9,7 @@ import { MATH_FUNCTION, loadMathFunction } from '../commands/FUNCTION_LOAD.spec'
 import { RESP_TYPES } from '../RESP/decoder';
 import { BlobStringReply, NumberReply } from '../RESP/types';
 import { SortedSetMember } from '../commands/generic-transformers';
+import { COMMANDS, PUBSUB_TYPE } from './pub-sub';
 
 export const SQUARE_SCRIPT = defineScript({
   SCRIPT:
@@ -768,5 +769,40 @@ describe('Client', () => {
         duplicate.destroy();
       }
     }, GLOBAL.SERVERS.OPEN);
+  });
+
+  describe('Push Handlers', () => {
+    testUtils.testWithClient('RESP3: add/remove invalidate handler, and validate its called', async client => {
+      const key = 'x'
+
+      let nodeResolve;
+
+      const promise = new Promise((res) => {
+        nodeResolve = res;
+      });
+
+      const symbol = client.addPushHandler("invalidate", (push: ReadonlyArray<any>) => {
+        assert.equal(push[0].toString(), "invalidate");
+        assert.equal(push[1].length, 1);
+        assert.equal(push[1].length, 1);
+        assert.equal(push[1][0].toString(), key);
+        // this test removing the handler,
+        // as flushAll in cleanup of test will issue a full invalidate,
+        // which would fail if this handler is called on it
+        client.removePushHandler(symbol);
+        nodeResolve();
+      })
+
+      await client.sendCommand(['CLIENT', 'TRACKING', 'ON']);
+      await client.get(key);
+      await client.set(key, '1');
+
+      await promise;
+    }, {
+        ...GLOBAL.SERVERS.OPEN,
+        clientOptions: {
+          RESP: 3
+        }
+    });
   });
 });
