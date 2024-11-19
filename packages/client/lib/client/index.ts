@@ -282,8 +282,11 @@ export default class RedisClient<
   private _self = this;
   private _commandOptions?: CommandOptions<TYPE_MAPPING>;
   #dirtyWatch?: string;
-  #epoch: number;
   #watchEpoch?: number; 
+
+  get socketEpoch(): number {
+    return this._self.#socket.epoch;
+  }
 
   get options(): RedisClientOptions<M, F, S, RESP> | undefined {
     return this._self.#options;
@@ -314,7 +317,6 @@ export default class RedisClient<
     this.#options = this.#initiateOptions(options);
     this.#queue = this.#initiateQueue();
     this.#socket = this.#initiateSocket();
-    this.#epoch = 0;
   }
 
   #initiateOptions(options?: RedisClientOptions<M, F, S, RESP, TYPE_MAPPING>): RedisClientOptions<M, F, S, RESP, TYPE_MAPPING> | undefined {
@@ -454,7 +456,6 @@ export default class RedisClient<
       })
       .on('connect', () => this.emit('connect'))
       .on('ready', () => {
-        this.#epoch++;
         this.emit('ready');
         this.#setPingTimer();
         this.#maybeScheduleWrite();
@@ -724,7 +725,7 @@ export default class RedisClient<
     const reply = await this._self.sendCommand(
       pushVariadicArguments(['WATCH'], key)
     );
-    this._self.#watchEpoch ??= this._self.#epoch;
+    this._self.#watchEpoch ??= this.socketEpoch;
     return reply as unknown as ReplyWithTypeMapping<SimpleStringReply<'OK'>, TYPE_MAPPING>;
   }
 
@@ -827,7 +828,7 @@ export default class RedisClient<
       throw new WatchError(dirtyWatch);
     }
 
-    if (watchEpoch && watchEpoch !== this._self.#epoch) {
+    if (watchEpoch && watchEpoch !== this.socketEpoch) {
       throw new WatchError('Client reconnected after WATCH');
     }
 
