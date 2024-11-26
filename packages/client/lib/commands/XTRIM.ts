@@ -13,7 +13,7 @@ export default {
     parser: CommandParser,
     key: RedisArgument,
     strategy: 'MAXLEN' | 'MINID',
-    threshold: number,
+    threshold: number | string,
     options?: XTrimOptions
   ) {
     parser.push('XTRIM')
