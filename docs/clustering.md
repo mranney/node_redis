@@ -101,6 +101,33 @@ createCluster({
 
 > This is a common problem when using ElastiCache. See [Accessing ElastiCache from outside AWS](https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/accessing-elasticache.html) for more information on that.
 
+
+### Aws Elasticache Clusters with TLS
+
+```javascript
+const redisCluster = createCluster({
+  rootNodes: [{
+    socket: {
+      host: 'redis cluster/server address', // for example 'clustercfg.your-redis-cluster-name.xiko.euw1.cache.amazonaws.com'
+      port: 6379
+    }
+  }],
+  defaults: {
+    socket: {
+      tls: true
+    },
+    password: 'token'
+  }
+});
+redisCluster
+    .on('connect', () => console.log('Connected to Redis DB'))
+    .on('ready', () => console.log('Client ready to use Redis DB'))
+    .on('end', () => console.log('Client disconnected from Redis DB'))
+    .on('error', (err) => console.log('Redis Client Error', err))
+
+  await redisCluster.connect()
+```
+
 ## Command Routing
 
 ### Commands that operate on Redis Keys
