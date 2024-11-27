@@ -1,0 +1,12 @@
+{
+  "name": "node-redis-doctests",
+  "version": "1.0.0",
+  "description": "Code examples for redis.io",
+  "main": "index.js",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "redis": "../"
+  }
+}
+
