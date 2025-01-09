@@ -65,7 +65,45 @@ await client.del('myhash')
 // REMOVE_END
 // STEP_END
 
+// STEP_START hgetall
+const res10 = await client.hSet(
+  'myhash',
+  {
+    'field1': 'Hello',
+    'field2': 'World'
+  }
+)
+
+const res11 = await client.hGetAll('myhash')
+console.log(res11) // [Object: null prototype] { field1: 'Hello', field2: 'World' }
+
+// REMOVE_START
+assert.deepEqual(res11, {
+  field1: 'Hello',
+  field2: 'World'
+});
+await client.del('myhash')
+// REMOVE_END
+// STEP_END
+
+// STEP_START hvals
+const res12 = await client.hSet(
+  'myhash',
+  {
+    'field1': 'Hello',
+    'field2': 'World'
+  }
+)
+
+const res13 = await client.hVals('myhash')
+console.log(res13) // [ 'Hello', 'World' ]
+
+// REMOVE_START
+assert.deepEqual(res13, [ 'Hello', 'World' ]);
+await client.del('myhash')
+// REMOVE_END
+// STEP_END
+
 // HIDE_START
 await client.quit();
 // HIDE_END
-
