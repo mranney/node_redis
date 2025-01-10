@@ -328,7 +328,7 @@ describe('TokenManager', () => {
         assert.equal(listener.receivedTokens.length, 1, 'Should not receive new token after failure');
         assert.equal(listener.errors.length, 1, 'Should receive error');
         assert.equal(listener.errors[0].message, 'Fatal error', 'Should have correct error message');
-        assert.equal(listener.errors[0].isFatal, true, 'Should be a fatal error');
+        assert.equal(listener.errors[0].isRetryable, false, 'Should be a fatal error');
 
         // verify that the token manager is stopped and no more requests are made after the error and expected refresh time
         await delay(80);
@@ -352,7 +352,7 @@ describe('TokenManager', () => {
             initialDelayMs: 100,
             maxDelayMs: 1000,
             backoffMultiplier: 2,
-            shouldRetry: (error: unknown) => error instanceof Error && error.message === 'Temporary failure'
+            isRetryable: (error: unknown) => error instanceof Error && error.message === 'Temporary failure'
           }
         };
 
@@ -389,7 +389,7 @@ describe('TokenManager', () => {
         // Should have first error but not stop due to retry config
         assert.equal(listener.errors.length, 1, 'Should have first error');
         assert.ok(listener.errors[0].message.includes('attempt 1'), 'Error should indicate first attempt');
-        assert.equal(listener.errors[0].isFatal, false, 'Should not be a fatal error');
+        assert.equal(listener.errors[0].isRetryable, true, 'Should not be a fatal error');
         assert.equal(manager.isRunning(), true, 'Should continue running during retries');
 
         // Advance past first retry (delay: 100ms due to backoff)
@@ -401,7 +401,7 @@ describe('TokenManager', () => {
 
         assert.equal(listener.errors.length, 2, 'Should have second error');
         assert.ok(listener.errors[1].message.includes('attempt 2'), 'Error should indicate second attempt');
-        assert.equal(listener.errors[0].isFatal, false, 'Should not be a fatal error');
+        assert.equal(listener.errors[0].isRetryable, true, 'Should not be a fatal error');
         assert.equal(manager.isRunning(), true, 'Should continue running during retries');
 
         // Advance past second retry (delay: 200ms due to backoff)
@@ -435,7 +435,7 @@ describe('TokenManager', () => {
             maxDelayMs: 1000,
             backoffMultiplier: 2,
             jitterPercentage: 0,
-            shouldRetry: (error: unknown) => error instanceof Error && error.message === 'Temporary failure'
+            isRetryable: (error: unknown) => error instanceof Error && error.message === 'Temporary failure'
           }
         };
 
@@ -470,7 +470,7 @@ describe('TokenManager', () => {
         // First error
         assert.equal(listener.errors.length, 1, 'Should have first error');
         assert.equal(manager.isRunning(), true, 'Should continue running after first error');
-        assert.equal(listener.errors[0].isFatal, false, 'Should not be a fatal error');
+        assert.equal(listener.errors[0].isRetryable, true, 'Should not be a fatal error');
 
         // Advance past first retry
         await delay(100);
@@ -483,7 +483,7 @@ describe('TokenManager', () => {
         // Second error
         assert.equal(listener.errors.length, 2, 'Should have second error');
         assert.equal(manager.isRunning(), true, 'Should continue running after second error');
-        assert.equal(listener.errors[1].isFatal, false, 'Should not be a fatal error');
+        assert.equal(listener.errors[1].isRetryable, true, 'Should not be a fatal error');
 
         // Advance past second retry
         await delay(200);
@@ -495,7 +495,7 @@ describe('TokenManager', () => {
 
         // Should stop after max retries
         assert.equal(listener.errors.length, 3, 'Should have final error');
-        assert.equal(listener.errors[2].isFatal, true, 'Should not be a fatal error');
+        assert.equal(listener.errors[2].isRetryable, false, 'Should be a fatal error');
         assert.equal(manager.isRunning(), false, 'Should stop after max retries exceeded');
         assert.equal(identityProvider.getRequestCount(), 4, 'Should have made exactly 4 requests');
 

@@ -303,7 +303,7 @@ export default class RedisClient<
   #epoch: number;
   #watchEpoch?: number; 
 
-  private credentialsSubscription: Disposable | null = null;
+  #credentialsSubscription: Disposable | null = null;
 
   get options(): RedisClientOptions<M, F, S, RESP> | undefined {
     return this._self.#options;
@@ -394,19 +394,17 @@ export default class RedisClient<
     }
   }
 
-  private subscribeForStreamingCredentials(cp: StreamingCredentialsProvider): Promise<[BasicAuth, Disposable]> {
+   #subscribeForStreamingCredentials(cp: StreamingCredentialsProvider): Promise<[BasicAuth, Disposable]> {
     return cp.subscribe({
       onNext: credentials => {
         this.reAuthenticate(credentials).catch(error => {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error('Error during re-authentication', errorMessage);
           cp.onReAuthenticationError(new CredentialsError(errorMessage));
         });
 
       },
       onError: (e: Error) => {
         const errorMessage = `Error from streaming credentials provider: ${e.message}`;
-        console.error(errorMessage);
         cp.onReAuthenticationError(new UnableToObtainNewCredentialsError(errorMessage));
       }
     });
@@ -431,8 +429,8 @@ export default class RedisClient<
 
       if (cp && cp.type === 'streaming-credentials-provider') {
 
-        const [credentials, disposable]  = await this.subscribeForStreamingCredentials(cp)
-        this.credentialsSubscription = disposable;
+        const [credentials, disposable]  = await this.#subscribeForStreamingCredentials(cp)
+        this.#credentialsSubscription = disposable;
 
         if (credentials.password) {
           hello.AUTH = {
@@ -467,8 +465,8 @@ export default class RedisClient<
 
       if (cp && cp.type === 'streaming-credentials-provider') {
 
-        const [credentials, disposable]  = await this.subscribeForStreamingCredentials(cp)
-        this.credentialsSubscription = disposable;
+        const [credentials, disposable]  = await this.#subscribeForStreamingCredentials(cp)
+        this.#credentialsSubscription = disposable;
 
         if (credentials.username || credentials.password) {
           commands.push(
@@ -1105,8 +1103,8 @@ export default class RedisClient<
     const chainId = Symbol('Reset Chain'),
       promises = [this._self.#queue.reset(chainId)],
       selectedDB = this._self.#options?.database ?? 0;
-    this.credentialsSubscription?.[Symbol.dispose]();
-    this.credentialsSubscription = null;
+    this._self.#credentialsSubscription?.[Symbol.dispose]();
+    this._self.#credentialsSubscription = null;
     for (const command of (await this._self.#handshake(selectedDB))) {
       promises.push(
         this._self.#queue.addCommand(command, {
@@ -1158,8 +1156,8 @@ export default class RedisClient<
    * @deprecated use .close instead
    */
   QUIT(): Promise<string> {
-    this.credentialsSubscription?.[Symbol.dispose]();
-    this.credentialsSubscription = null;
+    this._self.#credentialsSubscription?.[Symbol.dispose]();
+    this._self.#credentialsSubscription = null;
     return this._self.#socket.quit(async () => {
       clearTimeout(this._self.#pingTimer);
       const quitPromise = this._self.#queue.addCommand<string>(['QUIT']);
@@ -1198,8 +1196,8 @@ export default class RedisClient<
         resolve();
       };
       this._self.#socket.on('data', maybeClose);
-      this.credentialsSubscription?.[Symbol.dispose]();
-      this.credentialsSubscription = null;
+      this._self.#credentialsSubscription?.[Symbol.dispose]();
+      this._self.#credentialsSubscription = null;
     });
   }
 
@@ -1210,8 +1208,8 @@ export default class RedisClient<
     clearTimeout(this._self.#pingTimer);
     this._self.#queue.flushAll(new DisconnectsClientError());
     this._self.#socket.destroy();
-    this.credentialsSubscription?.[Symbol.dispose]();
-    this.credentialsSubscription = null;
+    this._self.#credentialsSubscription?.[Symbol.dispose]();
+    this._self.#credentialsSubscription = null;
   }
 
   ref() {

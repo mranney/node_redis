@@ -4,17 +4,14 @@
     "outDir": "./dist"
   },
   "include": [
-    "./samples/**/*.ts",
     "./lib/**/*.ts"
   ],
   "exclude": [
-    "./lib/test-utils.ts",
     "./lib/**/*.spec.ts",
-    "./lib/sentinel/test-util.ts"
+    "./lib/test-util.ts",
   ],
   "typedocOptions": {
     "entryPoints": [
-      "./index.ts",
       "./lib"
     ],
     "entryPointStrategy": "expand",

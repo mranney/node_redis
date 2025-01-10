@@ -11,7 +11,8 @@
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && tsc",
-    "start:auth-pkce": "npm run build && node dist/samples/auth-code-pkce/index.js",
+    "start:auth-pkce": "tsx --tsconfig tsconfig.samples.json ./samples/auth-code-pkce/index.ts",
+    "test-integration": "mocha -r tsx --tsconfig tsconfig.integration-tests.json './integration-tests/**/*.spec.ts'",
     "test": "nyc -r text-summary -r lcov mocha -r tsx './lib/**/*.spec.ts'"
   },
   "dependencies": {

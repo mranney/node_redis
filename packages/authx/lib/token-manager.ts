@@ -5,18 +5,70 @@ import { Token } from './token';
  * The configuration for retrying token refreshes.
  */
 export interface RetryPolicy {
-  // The maximum number of attempts to retry token refreshes.
+  /**
+   * The maximum number of attempts to retry token refreshes.
+   */
   maxAttempts: number;
-  // The initial delay in milliseconds before the first retry.
+
+  /**
+   * The initial delay in milliseconds before the first retry.
+   */
   initialDelayMs: number;
-  // The maximum delay in milliseconds between retries (the calculated delay will be capped at this value).
+
+  /**
+   * The maximum delay in milliseconds between retries.
+   * The calculated delay will be capped at this value.
+   */
   maxDelayMs: number;
-  // The multiplier for exponential backoff between retries. e.g. 2 will double the delay each time.
+
+  /**
+   * The multiplier for exponential backoff between retries.
+   * @example
+   * A value of 2 will double the delay each time:
+   * - 1st retry: initialDelayMs
+   * - 2nd retry: initialDelayMs * 2
+   * - 3rd retry: initialDelayMs * 4
+   */
   backoffMultiplier: number;
-  // The percentage of jitter to apply to the delay. e.g. 0.1 will add or subtract up to 10% of the delay.
+
+  /**
+   * The percentage of jitter to apply to the delay.
+   * @example
+   * A value of 0.1 will add or subtract up to 10% of the delay.
+   */
   jitterPercentage?: number;
-  // A custom function to determine if a retry should be attempted based on the error and attempt number.
-  shouldRetry?: (error: unknown, attempt: number) => boolean;
+
+  /**
+   * Function to classify errors from the identity provider as retryable or non-retryable.
+   * Used to determine if a token refresh failure should be retried based on the type of error.
+   *
+   * The default behavior is to retry all types of errors if no function is provided.
+   *
+   * Common use cases:
+   * - Network errors that may be transient (should retry)
+   * - Invalid credentials (should not retry)
+   * - Rate limiting responses (should retry)
+   *
+   * @param error - The error from the identity provider3
+   * @param attempt - Current retry attempt (0-based)
+   * @returns `true` if the error is considered transient and the operation should be retried
+   *
+   * @example
+   * ```typescript
+   * const retryPolicy: RetryPolicy = {
+   *   maxAttempts: 3,
+   *   initialDelayMs: 1000,
+   *   maxDelayMs: 5000,
+   *   backoffMultiplier: 2,
+   *   isRetryable: (error) => {
+   *     // Retry on network errors or rate limiting
+   *     return error instanceof NetworkError ||
+   *            error instanceof RateLimitError;
+   *   }
+   * };
+   * ```
+   */
+  isRetryable?: (error: unknown, attempt: number) => boolean;
 }
 
 /**
@@ -36,14 +88,13 @@ export interface TokenManagerConfig {
 }
 
 /**
- * IDPError is an error that occurs while calling the underlying IdentityProvider.
+ * IDPError indicates a failure from the identity provider.
  *
- * It can be transient and if retry policy is configured, the token manager will attempt to obtain a token again.
- * This means that receiving non-fatal error is not a stream termination event.
- * The stream will be terminated only if the error is fatal.
+ * The `isRetryable` flag is determined by the RetryPolicy's error classification function - if an error is
+ * classified as retryable, it will be marked as transient and the token manager will attempt to recover.
  */
 export class IDPError extends Error {
-  constructor(public readonly message: string, public readonly isFatal: boolean) {
+  constructor(public readonly message: string, public readonly isRetryable: boolean) {
     super(message);
     this.name = 'IDPError';
   }
@@ -105,7 +156,6 @@ export class TokenManager<T> {
    */
   public start(listener: TokenStreamListener<T>, initialDelayMs: number = 0): Disposable {
     if (this.listener) {
-      console.log('TokenManager is already running, stopping the previous instance');
       this.stop();
     }
 
@@ -142,14 +192,14 @@ export class TokenManager<T> {
   private shouldRetry(error: unknown): boolean {
     if (!this.config.retry) return false;
 
-    const { maxAttempts, shouldRetry } = this.config.retry;
+    const { maxAttempts, isRetryable } = this.config.retry;
 
     if (this.retryAttempt >= maxAttempts) {
       return false;
     }
 
-    if (shouldRetry) {
-      return shouldRetry(error, this.retryAttempt);
+    if (isRetryable) {
+      return isRetryable(error, this.retryAttempt);
     }
 
     return false;
@@ -172,10 +222,10 @@ export class TokenManager<T> {
       if (this.shouldRetry(error)) {
         this.retryAttempt++;
         const retryDelay = this.calculateRetryDelay();
-        this.notifyError(`Token refresh failed (attempt ${this.retryAttempt}), retrying in ${retryDelay}ms: ${error}`, false)
+        this.notifyError(`Token refresh failed (attempt ${this.retryAttempt}), retrying in ${retryDelay}ms: ${error}`, true)
         this.scheduleNextRefresh(retryDelay);
       } else {
-        this.notifyError(error, true);
+        this.notifyError(error, false);
         this.stop();
       }
     }
@@ -255,13 +305,13 @@ export class TokenManager<T> {
     return this.currentToken;
   }
 
-  private notifyError = (error: unknown, isFatal: boolean): void => {
+  private notifyError(error: unknown, isRetryable: boolean): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (!this.listener) {
       throw new Error(`TokenManager is not running but received an error: ${errorMessage}`);
     }
 
-    this.listener.onError(new IDPError(errorMessage, isFatal));
+    this.listener.onError(new IDPError(errorMessage, isRetryable));
   }
 }

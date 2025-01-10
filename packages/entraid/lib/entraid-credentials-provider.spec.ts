@@ -134,15 +134,15 @@ describe('EntraID CredentialsProvider Subscription Behavior', () => {
       private readonly tokenSequence: AuthenticationResult[] = [
         {
           accessToken: 'initial-token',
-          account: { username: 'test-user' }
+          uniqueId: 'test-user'
         } as AuthenticationResult,
         {
           accessToken: 'refresh-token-1',
-          account: { username: 'test-user' }
+          uniqueId: 'test-user'
         } as AuthenticationResult,
         {
           accessToken: 'refresh-token-2',
-          account: { username: 'test-user' }
+          uniqueId: 'test-user'
         } as AuthenticationResult
       ]
     ) {}

@@ -22,7 +22,6 @@ export class MSALIdentityProvider implements IdentityProvider<AuthenticationResu
         ttlMs: result.expiresOn.getTime() - Date.now()
       };
     } catch (error) {
-      console.error('Error acquiring token:', error);
       throw error;
     }
   }

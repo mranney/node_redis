@@ -82,10 +82,6 @@ app.get('/login', async (req: AuthRequest, res: Response) => {
 
 app.get('/redirect', async (req: AuthRequest, res: Response) => {
   try {
-    // Debug log to see exactly what we're receiving
-    console.log('Full request query:', req.query);
-    console.log('Code from request:', req.query.code);
-    console.log('Session state:', req.session);
 
     // The authorization code is in req.query.code
     const { code, client_info } = req.query;

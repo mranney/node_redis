@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "./integration-tests/**/*.ts",
+    "./lib/**/*.ts"
+  ],
+  "compilerOptions": {
+    "noEmit": true
+  },
+}

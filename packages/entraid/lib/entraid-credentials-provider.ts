@@ -12,32 +12,28 @@ import {
 export class EntraidCredentialsProvider implements StreamingCredentialsProvider {
   readonly type = 'streaming-credentials-provider';
 
-  private readonly listeners: Set<StreamingCredentialsListener<BasicAuth>> = new Set();
+  readonly #listeners: Set<StreamingCredentialsListener<BasicAuth>> = new Set();
 
-  private tokenManagerDisposable: Disposable | null = null;
-  private isStarting: boolean = false;
+  #tokenManagerDisposable: Disposable | null = null;
+  #isStarting: boolean = false;
 
-  private pendingSubscribers: Array<{
+  #pendingSubscribers: Array<{
     resolve: (value: [BasicAuth, Disposable]) => void;
     reject: (error: Error) => void;
     pendingListener: StreamingCredentialsListener<BasicAuth>;
   }> = [];
 
   constructor(
-    private readonly tokenManager: TokenManager<AuthenticationResult>,
-    private readonly idp: IdentityProvider<AuthenticationResult>,
-    options: {
-      onReAuthenticationError?: (error: ReAuthenticationError) => void
-      credentialsMapper?: (token: AuthenticationResult) => BasicAuth
+    public readonly tokenManager: TokenManager<AuthenticationResult>,
+    public readonly idp: IdentityProvider<AuthenticationResult>,
+    private readonly options: {
+      onReAuthenticationError?: (error: ReAuthenticationError) => void;
+      credentialsMapper?: (token: AuthenticationResult) => BasicAuth;
+      onRetryableError?: (error: string) => void;
     } = {}
   ) {
-    this.onReAuthenticationError = options.onReAuthenticationError ??
-      ((error) => console.error('ReAuthenticationError', error));
-    this.credentialsMapper = options.credentialsMapper ?? ((token) => ({
-      username: token.account?.username ?? undefined,
-      password: token.accessToken
-    }));
-
+    this.onReAuthenticationError = options.onReAuthenticationError ?? DEFAULT_ERROR_HANDLER;
+    this.#credentialsMapper = options.credentialsMapper ?? DEFAULT_CREDENTIALS_MAPPER;
   }
 
   async subscribe(
@@ -47,81 +43,98 @@ export class EntraidCredentialsProvider implements StreamingCredentialsProvider 
     const currentToken = this.tokenManager.getCurrentToken();
 
     if (currentToken) {
-      return [this.credentialsMapper(currentToken.value), this.createDisposable(listener)];
+      return [this.#credentialsMapper(currentToken.value), this.#createDisposable(listener)];
     }
 
-    if (this.isStarting) {
+    if (this.#isStarting) {
       return new Promise((resolve, reject) => {
-        this.pendingSubscribers.push({ resolve, reject, pendingListener: listener });
+        this.#pendingSubscribers.push({ resolve, reject, pendingListener: listener });
       });
     }
 
-    this.isStarting = true;
+    this.#isStarting = true;
     try {
-      const initialToken = await this.startTokenManagerAndObtainInitialToken();
+      const initialToken = await this.#startTokenManagerAndObtainInitialToken();
 
-      this.pendingSubscribers.forEach(({ resolve, pendingListener }) => {
-        resolve([this.credentialsMapper(initialToken.value), this.createDisposable(pendingListener)]);
+      this.#pendingSubscribers.forEach(({ resolve, pendingListener }) => {
+        resolve([this.#credentialsMapper(initialToken.value), this.#createDisposable(pendingListener)]);
       });
-      this.pendingSubscribers = [];
+      this.#pendingSubscribers = [];
 
-      return [this.credentialsMapper(initialToken.value), this.createDisposable(listener)];
+      return [this.#credentialsMapper(initialToken.value), this.#createDisposable(listener)];
     } finally {
-      this.isStarting = false;
+      this.#isStarting = false;
     }
   }
 
   onReAuthenticationError: (error: ReAuthenticationError) => void;
 
-  private credentialsMapper: (token: AuthenticationResult) => BasicAuth ;
+  #credentialsMapper: (token: AuthenticationResult) => BasicAuth;
 
-  private createTokenManagerListener(subscribers: Set<StreamingCredentialsListener<BasicAuth>>) {
+  #createTokenManagerListener(subscribers: Set<StreamingCredentialsListener<BasicAuth>>) {
     return {
       onError: (error: IDPError): void => {
-        if (error.isFatal) {
+        if (!error.isRetryable) {
           subscribers.forEach(listener => listener.onError(error));
         } else {
-          console.log('Transient identity provider error', error);
+          this.options.onRetryableError?.(error.message);
         }
       },
       onNext: (token: { value: AuthenticationResult }): void => {
-        const credentials = this.credentialsMapper(token.value);
+        const credentials = this.#credentialsMapper(token.value);
         subscribers.forEach(listener => listener.onNext(credentials));
       }
     };
   }
 
-  private createDisposable(listener: StreamingCredentialsListener<BasicAuth>): Disposable {
-    this.listeners.add(listener);
+  #createDisposable(listener: StreamingCredentialsListener<BasicAuth>): Disposable {
+    this.#listeners.add(listener);
 
     return {
       [Symbol.dispose]: () => {
-        this.listeners.delete(listener);
-        if (this.listeners.size === 0 && this.tokenManagerDisposable) {
-          this.tokenManagerDisposable[Symbol.dispose]();
-          this.tokenManagerDisposable = null;
+        this.#listeners.delete(listener);
+        if (this.#listeners.size === 0 && this.#tokenManagerDisposable) {
+          this.#tokenManagerDisposable[Symbol.dispose]();
+          this.#tokenManagerDisposable = null;
         }
       }
     };
   }
 
-  private async startTokenManagerAndObtainInitialToken(): Promise<Token<AuthenticationResult>> {
+  async #startTokenManagerAndObtainInitialToken(): Promise<Token<AuthenticationResult>> {
     const initialResponse = await this.idp.requestToken();
     const token = this.tokenManager.wrapAndSetCurrentToken(initialResponse.token, initialResponse.ttlMs);
 
-    this.tokenManagerDisposable = this.tokenManager.start(
-      this.createTokenManagerListener(this.listeners),
+    this.#tokenManagerDisposable = this.tokenManager.start(
+      this.#createTokenManagerListener(this.#listeners),
       this.tokenManager.calculateRefreshTime(token)
     );
     return token;
   }
 
   public hasActiveSubscriptions(): boolean {
-    return this.tokenManagerDisposable !== null && this.listeners.size > 0;
+    return this.#tokenManagerDisposable !== null && this.#listeners.size > 0;
   }
 
   public getSubscriptionsCount(): number {
-    return this.listeners.size;
+    return this.#listeners.size;
+  }
+
+  public getTokenManager() {
+    return this.tokenManager;
+  }
+
+  public getCurrentCredentials(): BasicAuth | null {
+    const currentToken = this.tokenManager.getCurrentToken();
+    return currentToken ? this.#credentialsMapper(currentToken.value) : null;
   }
 
 }
+
+const DEFAULT_CREDENTIALS_MAPPER = (token: AuthenticationResult): BasicAuth => ({
+  username: token.uniqueId,
+  password: token.accessToken
+});
+
+const DEFAULT_ERROR_HANDLER = (error: ReAuthenticationError) =>
+  console.error('ReAuthenticationError', error);

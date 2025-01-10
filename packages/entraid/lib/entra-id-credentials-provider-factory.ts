@@ -11,13 +11,12 @@ import { RetryPolicy, TokenManager, TokenManagerConfig, ReAuthenticationError } 
 import { EntraidCredentialsProvider } from './entraid-credentials-provider';
 import { MSALIdentityProvider } from './msal-identity-provider';
 
-
 /**
  * This class is used to create credentials providers for different types of authentication flows.
  */
 export class EntraIdCredentialsProviderFactory {
 
-   /**
+  /**
    * This method is used to create a ManagedIdentityProvider for both system-assigned and user-assigned managed identities.
    *
    * @param params
@@ -44,7 +43,7 @@ export class EntraIdCredentialsProviderFactory {
 
     const idp = new MSALIdentityProvider(
       () => client.acquireToken({
-        resource: params.scopes?.[0] ?? FALLBACK_SCOPE,
+        resource: params.scopes?.[0] ?? REDIS_SCOPE,
         forceRefresh: true
       }).then(x => x === null ? Promise.reject('Token is null') : x)
     );
@@ -52,7 +51,7 @@ export class EntraIdCredentialsProviderFactory {
     return new EntraidCredentialsProvider(
       new TokenManager(idp, params.tokenManagerConfig),
       idp,
-      { onReAuthenticationError: params.onReAuthenticationError }
+      { onReAuthenticationError: params.onReAuthenticationError, credentialsMapper: OID_CREDENTIALS_MAPPER }
     );
   }
 
@@ -72,12 +71,12 @@ export class EntraIdCredentialsProviderFactory {
    * @param params
    */
   static createForUserAssignedManagedIdentity(
-    params: CredentialParams
+    params: CredentialParams & { userAssignedClientId: string }
   ): EntraidCredentialsProvider {
-    return this.createManagedIdentityProvider(params, params.clientId);
+    return this.createManagedIdentityProvider(params, params.userAssignedClientId);
   }
 
-  private static _createForClientCredentials(
+  static #createForClientCredentials(
     authConfig: NodeAuthOptions,
     params: CredentialParams
   ): EntraidCredentialsProvider {
@@ -96,12 +95,15 @@ export class EntraIdCredentialsProviderFactory {
     const idp = new MSALIdentityProvider(
       () => client.acquireTokenByClientCredential({
         skipCache: true,
-        scopes: params.scopes ?? [FALLBACK_SCOPE]
+        scopes: params.scopes ?? [REDIS_SCOPE_DEFAULT]
       }).then(x => x === null ? Promise.reject('Token is null') : x)
     );
 
     return new EntraidCredentialsProvider(new TokenManager(idp, params.tokenManagerConfig), idp,
-      { onReAuthenticationError: params.onReAuthenticationError });
+      {
+        onReAuthenticationError: params.onReAuthenticationError,
+        credentialsMapper: OID_CREDENTIALS_MAPPER
+      });
   }
 
   /**
@@ -111,7 +113,7 @@ export class EntraIdCredentialsProviderFactory {
   static createForClientCredentialsWithCertificate(
     params: ClientCredentialsWithCertificateParams
   ): EntraidCredentialsProvider {
-    return this._createForClientCredentials(
+    return this.#createForClientCredentials(
       {
         clientId: params.clientId,
         clientCertificate: params.certificate
@@ -127,7 +129,7 @@ export class EntraIdCredentialsProviderFactory {
   static createForClientCredentials(
     params: ClientSecretCredentialsParams
   ): EntraidCredentialsProvider {
-    return this._createForClientCredentials(
+    return this.#createForClientCredentials(
       {
         clientId: params.clientId,
         clientSecret: params.clientSecret
@@ -210,11 +212,10 @@ export class EntraIdCredentialsProviderFactory {
     }
   }
 
-
 }
 
-
-const FALLBACK_SCOPE = 'https://redis.azure.com/.default';
+const REDIS_SCOPE_DEFAULT = 'https://redis.azure.com/.default';
+const REDIS_SCOPE = 'https://redis.azure.com'
 
 export type AuthorityConfig =
   | { type: 'multi-tenant'; tenantId: string }
@@ -257,16 +258,16 @@ const loggerOptions = {
     if (!containsPii) console.log(message);
   },
   piiLoggingEnabled: false,
-  logLevel: LogLevel.Verbose
+  logLevel: LogLevel.Error
 }
 
 /**
- * The most imporant part of the RetryPolicy is the shouldRetry function. This function is used to determine if a request should be retried based
- * on the error returned from the identity provider. The defaultRetryPolicy is used to retry on network errors only.
+ * The most important part of the RetryPolicy is the `isRetryable` function. This function is used to determine if a request should be retried based
+ * on the error returned from the identity provider. The default for is to retry on network errors only.
  */
 export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   // currently only retry on network errors
-  shouldRetry: (error: unknown) => error instanceof NetworkError,
+  isRetryable: (error: unknown) => error instanceof NetworkError,
   maxAttempts: 10,
   initialDelayMs: 100,
   maxDelayMs: 100000,
@@ -355,3 +356,16 @@ export class AuthCodeFlowHelper {
   }
 }
 
+const OID_CREDENTIALS_MAPPER = (token: AuthenticationResult) => {
+
+  // Client credentials flow is app-only authentication (no user context),
+  // so only access token is provided without user-specific claims (uniqueId, idToken, ...)
+  // this means that we need to extract the oid from the access token manually
+  const accessToken = JSON.parse(Buffer.from(token.accessToken.split('.')[1], 'base64').toString());
+
+  return ({
+    username: accessToken.oid,
+    password: token.accessToken
+  })
+
+}
