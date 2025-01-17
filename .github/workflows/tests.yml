@@ -6,25 +6,29 @@ on:
       - master
       - v4.0
       - v5
+    paths-ignore:
+      - '**/*.md'
   pull_request:
     branches:
       - master
       - v4.0
       - v5
+    paths-ignore:
+      - '**/*.md'
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        node-version: ['18', '20']
+        node-version: ['18', '20', '22']
         redis-version: ['6.2.6-v17', '7.2.0-v13', '7.4.0-v1']
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - name: Update npm
