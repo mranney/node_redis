@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import testUtils, { GLOBAL, waitTillBeenCalled } from '../test-utils';
-import RedisClient, { RedisClientType } from '.';
+import RedisClient, { RedisClientOptions, RedisClientType } from '.';
 import { AbortError, ClientClosedError, ClientOfflineError, ConnectionTimeoutError, DisconnectsClientError, ErrorReply, MultiErrorReply, SocketClosedUnexpectedlyError, WatchError } from '../errors';
 import { defineScript } from '../lua-script';
 import { spy } from 'sinon';
@@ -25,36 +25,87 @@ export const SQUARE_SCRIPT = defineScript({
 
 describe('Client', () => {
   describe('parseURL', () => {
-    it('redis://user:secret@localhost:6379/0', () => {
-      assert.deepEqual(
-        RedisClient.parseURL('redis://user:secret@localhost:6379/0'),
-        {
-          socket: {
-            host: 'localhost',
-            port: 6379
-          },
-          username: 'user',
-          password: 'secret',
-          database: 0
+    it('redis://user:secret@localhost:6379/0', async () => {
+      const result = RedisClient.parseURL('redis://user:secret@localhost:6379/0');
+      const expected : RedisClientOptions = {
+        socket: {
+          host: 'localhost',
+          port: 6379
+        },
+        username: 'user',
+        password: 'secret',
+        database: 0,
+        credentialsProvider: {
+          type: 'async-credentials-provider',
+          credentials: async () => ({
+            password: 'secret',
+            username: 'user'
+          })
         }
-      );
+      };
+
+      // Compare everything except the credentials function
+      const { credentialsProvider: resultCredProvider, ...resultRest } = result;
+      const { credentialsProvider: expectedCredProvider, ...expectedRest } = expected;
+
+      // Compare non-function properties
+      assert.deepEqual(resultRest, expectedRest);
+
+      if(result.credentialsProvider.type === 'async-credentials-provider'
+        && expected.credentialsProvider.type === 'async-credentials-provider') {
+
+        // Compare the actual output of the credentials functions
+        const resultCreds = await result.credentialsProvider.credentials();
+        const expectedCreds = await expected.credentialsProvider.credentials();
+        assert.deepEqual(resultCreds, expectedCreds);
+      } else {
+        assert.fail('Credentials provider type mismatch');
+      }
+
+
     });
 
-    it('rediss://user:secret@localhost:6379/0', () => {
-      assert.deepEqual(
-        RedisClient.parseURL('rediss://user:secret@localhost:6379/0'),
-        {
-          socket: {
-            host: 'localhost',
-            port: 6379,
-            tls: true
-          },
-          username: 'user',
-          password: 'secret',
-          database: 0
+    it('rediss://user:secret@localhost:6379/0', async () => {
+      const result = RedisClient.parseURL('rediss://user:secret@localhost:6379/0');
+      const expected: RedisClientOptions = {
+        socket: {
+          host: 'localhost',
+          port: 6379,
+          tls: true
+        },
+        username: 'user',
+        password: 'secret',
+        database: 0,
+        credentialsProvider: {
+          credentials: async () => ({
+            password: 'secret',
+            username: 'user'
+          }),
+          type: 'async-credentials-provider'
         }
-      );
-    });
+      };
+
+      // Compare everything except the credentials function
+      const { credentialsProvider: resultCredProvider, ...resultRest } = result;
+      const { credentialsProvider: expectedCredProvider, ...expectedRest } = expected;
+
+      // Compare non-function properties
+      assert.deepEqual(resultRest, expectedRest);
+      assert.equal(resultCredProvider.type, expectedCredProvider.type);
+
+      if (result.credentialsProvider.type === 'async-credentials-provider' &&
+        expected.credentialsProvider.type === 'async-credentials-provider') {
+
+        // Compare the actual output of the credentials functions
+        const resultCreds = await result.credentialsProvider.credentials();
+        const expectedCreds = await expected.credentialsProvider.credentials();
+        assert.deepEqual(resultCreds, expectedCreds);
+
+      } else {
+        assert.fail('Credentials provider type mismatch');
+      }
+
+    })
 
     it('Invalid protocol', () => {
       assert.throws(
@@ -89,6 +140,21 @@ describe('Client', () => {
         'PONG'
       );
     }, GLOBAL.SERVERS.PASSWORD);
+
+    testUtils.testWithClient('Client can authenticate asynchronously ', async client => {
+      assert.equal(
+        await client.ping(),
+        'PONG'
+      );
+    }, GLOBAL.SERVERS.ASYNC_BASIC_AUTH);
+
+    testUtils.testWithClient('Client can authenticate using the streaming credentials provider for initial token acquisition',
+      async client => {
+      assert.equal(
+        await client.ping(),
+        'PONG'
+      );
+    }, GLOBAL.SERVERS.STREAMING_AUTH);
 
     testUtils.testWithClient('should execute AUTH before SELECT', async client => {
       assert.equal(
@@ -294,6 +360,7 @@ describe('Client', () => {
           assert.equal(err.replies.length, 2);
           assert.deepEqual(err.errorIndexes, [1]);
           assert.ok(err.replies[1] instanceof ErrorReply);
+          // @ts-ignore TS2802
           assert.deepEqual([...err.errors()], [err.replies[1]]);
           return true;
         }

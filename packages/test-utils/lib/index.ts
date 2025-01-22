@@ -290,7 +290,8 @@ export default class TestUtils {
           ...dockerImage,
           numberOfMasters: options.numberOfMasters,
           numberOfReplicas: options.numberOfReplicas
-        }, options.serverArguments);
+        }, options.serverArguments,
+          options.clusterConfiguration?.defaults);
         return dockersPromise;
       });
     }

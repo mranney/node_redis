@@ -1,5 +1,5 @@
 {
-  "name": "@redis/client",
+  "name": "@redis/authx",
   "version": "5.0.0-next.5",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -9,18 +9,18 @@
     "!dist/tsconfig.tsbuildinfo"
   ],
   "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc",
     "test": "nyc -r text-summary -r lcov mocha -r tsx './lib/**/*.spec.ts'"
   },
   "dependencies": {
-    "cluster-key-slot": "1.1.2"
+    "@azure/msal-node": "^2.16.1"
   },
   "peerDependencies": {
-    "@redis/authx": "^5.0.0-next.5"
+    "@redis/client": "^5.0.0-next.5"
   },
   "devDependencies": {
-    "@redis/test-utils": "*",
-    "@types/sinon": "^17.0.3",
-    "sinon": "^17.0.1"
+
   },
   "engines": {
     "node": ">= 18"
@@ -32,7 +32,7 @@
   "bugs": {
     "url": "https://github.com/redis/node-redis/issues"
   },
-  "homepage": "https://github.com/redis/node-redis/tree/master/packages/client",
+  "homepage": "https://github.com/redis/node-redis/tree/master/packages/authx",
   "keywords": [
     "redis"
   ]

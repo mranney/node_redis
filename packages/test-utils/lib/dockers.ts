@@ -1,3 +1,4 @@
+import { RedisClusterClientOptions } from '@redis/client/dist/lib/cluster';
 import { createConnection } from 'node:net';
 import { once } from 'node:events';
 import { createClient } from '@redis/client/index';
@@ -102,7 +103,8 @@ async function spawnRedisClusterNodeDockers(
   dockersConfig: RedisClusterDockersConfig,
   serverArguments: Array<string>,
   fromSlot: number,
-  toSlot: number
+  toSlot: number,
+  clientConfig?: Partial<RedisClusterClientOptions>
 ) {
   const range: Array<number> = [];
   for (let i = fromSlot; i < toSlot; i++) {
@@ -111,7 +113,8 @@ async function spawnRedisClusterNodeDockers(
 
   const master = await spawnRedisClusterNodeDocker(
     dockersConfig,
-    serverArguments
+    serverArguments,
+    clientConfig
   );
 
   await master.client.clusterAddSlots(range);
@@ -127,7 +130,13 @@ async function spawnRedisClusterNodeDockers(
         'yes',
         '--cluster-node-timeout',
         '5000'
-      ]).then(async replica => {
+      ], clientConfig).then(async replica => {
+
+        const requirePassIndex = serverArguments.findIndex((x)=>x==='--requirepass');
+        if(requirePassIndex!==-1) {
+          const password = serverArguments[requirePassIndex+1];
+          await replica.client.configSet({'masterauth': password})
+        }
         await replica.client.clusterMeet('127.0.0.1', master.docker.port);
 
         while ((await replica.client.clusterSlots()).length === 0) {
@@ -151,7 +160,8 @@ async function spawnRedisClusterNodeDockers(
 
 async function spawnRedisClusterNodeDocker(
   dockersConfig: RedisClusterDockersConfig,
-  serverArguments: Array<string>
+  serverArguments: Array<string>,
+  clientConfig?: Partial<RedisClusterClientOptions>
 ) {
   const docker = await spawnRedisServerDocker(dockersConfig, [
       ...serverArguments,
@@ -163,7 +173,8 @@ async function spawnRedisClusterNodeDocker(
     client = createClient({
       socket: {
         port: docker.port
-      }
+      },
+      ...clientConfig
     });
 
   await client.connect();
@@ -178,7 +189,8 @@ const SLOTS = 16384;
 
 async function spawnRedisClusterDockers(
   dockersConfig: RedisClusterDockersConfig,
-  serverArguments: Array<string>
+  serverArguments: Array<string>,
+  clientConfig?: Partial<RedisClusterClientOptions>
 ): Promise<Array<RedisServerDocker>> {
   const numberOfMasters = dockersConfig.numberOfMasters ?? 2,
     slotsPerNode = Math.floor(SLOTS / numberOfMasters),
@@ -191,7 +203,8 @@ async function spawnRedisClusterDockers(
         dockersConfig,
         serverArguments,
         fromSlot,
-        toSlot
+        toSlot,
+        clientConfig
       )
     );
   }
@@ -234,13 +247,18 @@ function totalNodes(slots: any) {
 
 const RUNNING_CLUSTERS = new Map<Array<string>, ReturnType<typeof spawnRedisClusterDockers>>();
 
-export function spawnRedisCluster(dockersConfig: RedisClusterDockersConfig, serverArguments: Array<string>): Promise<Array<RedisServerDocker>> {
+export function spawnRedisCluster(
+  dockersConfig: RedisClusterDockersConfig,
+  serverArguments: Array<string>,
+  clientConfig?: Partial<RedisClusterClientOptions>): Promise<Array<RedisServerDocker>> {
+
   const runningCluster = RUNNING_CLUSTERS.get(serverArguments);
   if (runningCluster) {
     return runningCluster;
   }
 
-  const dockersPromise = spawnRedisClusterDockers(dockersConfig, serverArguments);
+  const dockersPromise = spawnRedisClusterDockers(dockersConfig, serverArguments,clientConfig);
+
   RUNNING_CLUSTERS.set(serverArguments, dockersPromise);
   return dockersPromise;
 }

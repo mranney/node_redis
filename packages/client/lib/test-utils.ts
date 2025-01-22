@@ -1,6 +1,7 @@
 import TestUtils from '@redis/test-utils';
 import { SinonSpy } from 'sinon';
 import { setTimeout } from 'node:timers/promises';
+import { CredentialsProvider } from '@redis/authx';
 import { Command } from './RESP/types';
 import { BasicCommandParser } from './client/parser';
 
@@ -16,6 +17,31 @@ const DEBUG_MODE_ARGS = utils.isVersionGreaterThan([7]) ?
   ['--enable-debug-command', 'yes'] :
   [];
 
+const asyncBasicAuthCredentialsProvider: CredentialsProvider =
+  {
+    type: 'async-credentials-provider',
+    credentials: async () => ({ password: 'password' })
+  } as const;
+
+const streamingCredentialsProvider: CredentialsProvider =
+  {
+    type: 'streaming-credentials-provider',
+
+    subscribe : (observable) => ( Promise.resolve([
+     { password: 'password' },
+      {
+        [Symbol.dispose]: () => {
+          console.log('disposing credentials provider subscription');
+        }
+      }
+    ])),
+
+    onReAuthenticationError: (error) => {
+      console.error('re-authentication error', error);
+    }
+
+  } as const;
+
 export const GLOBAL = {
   SERVERS: {
     OPEN: {
@@ -25,6 +51,18 @@ export const GLOBAL = {
       serverArguments: ['--requirepass', 'password', ...DEBUG_MODE_ARGS],
       clientOptions: {
         password: 'password'
+      }
+    },
+    ASYNC_BASIC_AUTH: {
+      serverArguments: ['--requirepass', 'password', ...DEBUG_MODE_ARGS],
+      clientOptions: {
+        credentialsProvider: asyncBasicAuthCredentialsProvider
+      }
+    },
+    STREAMING_AUTH: {
+      serverArguments: ['--requirepass', 'password', ...DEBUG_MODE_ARGS],
+      clientOptions: {
+        credentialsProvider: streamingCredentialsProvider
       }
     }
   },

@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": [
+    "./lib/**/*.ts"
+  ],
+  "exclude": [
+    "./lib/**/*.spec.ts",
+    "./lib/test-util.ts",
+  ],
+  "typedocOptions": {
+    "entryPoints": [
+      "./lib"
+    ],
+    "entryPointStrategy": "expand",
+    "out": "../../documentation/entraid"
+  }
+}

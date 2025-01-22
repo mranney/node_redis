@@ -1,20 +1,36 @@
 {
   "files": [],
-  "references": [{
-    "path": "./packages/client"
-  }, {
-    "path": "./packages/test-utils"
-  }, {
-    "path": "./packages/bloom"
-  }, {
-    "path": "./packages/graph"
-  }, {
-    "path": "./packages/json"
-  }, {
-    "path": "./packages/search"
-  }, {
-    "path": "./packages/time-series"
-  }, {
-    "path": "./packages/redis"
-  }]
+  "references": [
+    {
+      "path": "./packages/client"
+    },
+    {
+      "path": "./packages/test-utils"
+    },
+    {
+      "path": "./packages/bloom"
+    },
+    {
+      "path": "./packages/graph"
+    },
+    {
+      "path": "./packages/json"
+    },
+    {
+      "path": "./packages/search"
+    },
+    {
+      "path": "./packages/time-series"
+    },
+    {
+      "path": "./packages/redis"
+    },
+    {
+      "path": "./packages/authx"
+    },
+    {
+      "path": "./packages/entraid"
+    }
+  ]
+
 }

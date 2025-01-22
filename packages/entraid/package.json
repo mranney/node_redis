@@ -1,0 +1,49 @@
+{
+  "name": "@redis/entraid",
+  "version": "5.0.0-next.5",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "!dist/tsconfig.tsbuildinfo"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc",
+    "start:auth-pkce": "tsx --tsconfig tsconfig.samples.json ./samples/auth-code-pkce/index.ts",
+    "test-integration": "mocha -r tsx --tsconfig tsconfig.integration-tests.json './integration-tests/**/*.spec.ts'",
+    "test": "nyc -r text-summary -r lcov mocha -r tsx './lib/**/*.spec.ts'"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.16.1"
+  },
+  "peerDependencies": {
+    "@redis/authx": "^5.0.0-next.5",
+    "@redis/client": "^5.0.0-next.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/node": "^22.9.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.1",
+    "express-session": "^1.18.1",
+    "@redis/test-utils": "*"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/redis/node-redis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/redis/node-redis/issues"
+  },
+  "homepage": "https://github.com/redis/node-redis/tree/master/packages/entraid",
+  "keywords": [
+    "redis",
+    "entraid"
+  ]
+}

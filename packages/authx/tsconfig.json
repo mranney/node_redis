@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": [
+    "./index.ts",
+    "./lib/**/*.ts"
+  ],
+  "exclude": [
+    "./lib/**/*.spec.ts",
+  ],
+  "typedocOptions": {
+    "entryPoints": [
+      "./index.ts",
+      "./lib"
+    ],
+    "entryPointStrategy": "expand",
+    "out": "../../documentation/authx"
+  }
+}
