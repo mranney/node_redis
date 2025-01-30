@@ -203,6 +203,10 @@ export interface SearchReply {
 function documentValue(tuples: any) {
   const message = Object.create(null);
 
+  if (tuples == null) {
+    return message;
+  }
+
   let i = 0;
   while (i < tuples.length) {
       const key = tuples[i++],
