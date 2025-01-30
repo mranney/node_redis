@@ -4,6 +4,7 @@ Version 4 of Node Redis is a major refactor. While we have tried to maintain bac
 
 ## All of the Breaking Changes
 
+If using Typescript set the target to ES2015 (ES6) or higher, ES5 and below are not supported due to the usage of `private` class functions.
 See the [Change Log](../CHANGELOG.md).
 
 ### Promises
