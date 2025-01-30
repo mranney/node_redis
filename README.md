@@ -52,6 +52,7 @@ npm install redis
 | [`@redis/json`](./packages/json)               | [Redis JSON](https://redis.io/docs/data-types/json/) commands                               |
 | [`@redis/search`](./packages/search)           | [RediSearch](https://redis.io/docs/interact/search-and-query/) commands                     |
 | [`@redis/time-series`](./packages/time-series) | [Redis Time-Series](https://redis.io/docs/data-types/timeseries/) commands                  |
+| [`@redis/entraid`](./packages/entraid)         |  Secure token-based authentication for Redis clients using Microsoft Entra ID               |
 
 > Looking for a high-level library to handle object mapping? See [redis-om-node](https://github.com/redis/redis-om-node)!
 

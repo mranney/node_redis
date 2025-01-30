@@ -36,7 +36,7 @@ The first step to using @redis/entraid is choosing the right credentials provide
 
 ```typescript
 import { createClient } from '@redis/client';
-import { EntraIdCredentialsProviderFactory } from '@redis/entraid/dist/lib/entra-id-credentials-provider-factory';
+import { EntraIdCredentialsProviderFactory } from '@redis/entraid';
 
 const provider = EntraIdCredentialsProviderFactory.createForClientCredentials({
   clientId: 'your-client-id',
