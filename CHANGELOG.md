@@ -21,7 +21,7 @@
 
 - Fix `NOAUTH` error when using authentication & database (#1681)
 - Allow to `.quit()` in PubSub mode (#1766)
-- Add an option to configurate `name` on a client (#1758)
+- Add an option to configure `name` on a client (#1758)
 - Lowercase commands (`client.hset`) in `legacyMode`
 - Fix PubSub resubscribe (#1764)
 - Fix `RedisSocketOptions` type (#1741)
@@ -466,7 +466,7 @@ Features
 Bugfixes
 
 - Fixed a javascript parser regression introduced in 2.0 that could result in timeouts on high load. ([@BridgeAR](https://github.com/BridgeAR))
-- I was not able to write a regression test for this, since the error seems to only occur under heavy load with special conditions. So please have a look for timeouts with the js parser, if you use it and report all issues and switch to the hiredis parser in the meanwhile. If you're able to come up with a reproducable test case, this would be even better :)
+- I was not able to write a regression test for this, since the error seems to only occur under heavy load with special conditions. So please have a look for timeouts with the js parser, if you use it and report all issues and switch to the hiredis parser in the meanwhile. If you're able to come up with a reproducible test case, this would be even better :)
 - Fixed should_buffer boolean for .exec, .select and .auth commands not being returned and fix a couple special conditions ([@BridgeAR](https://github.com/BridgeAR))
 
 If you do not rely on transactions but want to reduce the RTT you can use .batch from now on. It'll behave just the same as .multi but it does not have any transaction and therefor won't roll back any failed commands.<br>
@@ -518,7 +518,7 @@ Bugfixes:
 
 - Fix argument mutation while using the array notation with the multi constructor (@BridgeAR)
 - Fix multi.hmset key not being type converted if used with an object and key not being a string (@BridgeAR)
-- Fix parser errors not being catched properly (@BridgeAR)
+- Fix parser errors not being caught properly (@BridgeAR)
 - Fix a crash that could occur if a redis server does not return the info command as usual #541 (@BridgeAR)
 - Explicitly passing undefined as a callback statement will work again. E.g. client.publish('channel', 'message', undefined); (@BridgeAR)
 
@@ -560,13 +560,13 @@ This is the biggest release that node_redis had since it was released in 2010. A
 - Increased coverage by 10% and add a lot of tests to make sure everything works as it should. We now reached 97% :-) (@BridgeAR)
 - Remove dead code, clean up and refactor very old chunks (@BridgeAR)
 - Don't flush the offline queue if reconnecting (@BridgeAR)
-- Emit all errors insteaf of throwing sometimes and sometimes emitting them (@BridgeAR)
+- Emit all errors instead of throwing sometimes and sometimes emitting them (@BridgeAR)
 - _auth_pass_ passwords are now checked to be a valid password (@jcppman & @BridgeAR)
 
 ## Bug fixes:
 
 - Don't kill the app anymore by randomly throwing errors sync instead of emitting them (@BridgeAR)
-- Don't catch user errors anymore occuring in callbacks (no try callback anymore & more fixes for the parser) (@BridgeAR)
+- Don't catch user errors anymore occurring in callbacks (no try callback anymore & more fixes for the parser) (@BridgeAR)
 - Early garbage collection of queued items (@dohse)
 - Fix js parser returning errors as strings (@BridgeAR)
 - Do not wrap errors into other errors (@BridgeAR)
@@ -588,19 +588,19 @@ This is the biggest release that node_redis had since it was released in 2010. A
 ## Breaking changes:
 
 1. redis.send_command commands have to be lower case from now on. This does only apply if you use `.send_command` directly instead of the convenient methods like `redis.command`.
-2. Error messages have changed quite a bit. If you depend on a specific wording please check your application carfully.
+2. Error messages have changed quite a bit. If you depend on a specific wording please check your application carefully.
 3. Errors are from now on always either returned if a callback is present or emitted. They won't be thrown (neither sync, nor async).
 4. The Multi error handling has changed a lot!
 
 - All errors are from now on errors instead of strings (this only applied to the js parser).
 - If an error occurs while queueing the commands an EXECABORT error will be returned including the failed commands as `.errors` property instead of an array with errors.
 - If an error occurs while executing the commands and that command has a callback it'll return the error as first parameter (`err, undefined` instead of `null, undefined`).
-- All the errors occuring while executing the commands will stay in the result value as error instance (if you used the js parser before they would have been strings). Be aware that the transaction won't be aborted if those error occurr!
+- All the errors occurring while executing the commands will stay in the result value as error instance (if you used the js parser before they would have been strings). Be aware that the transaction won't be aborted if those error occur!
 - If `multi.exec` does not have a callback and an EXECABORT error occurrs, it'll emit that error instead.
 
 5. If redis can't connect to your redis server it'll give up after a certain point of failures (either max connection attempts or connection timeout exceeded). If that is the case it'll emit an CONNECTION_BROKEN error. You'll have to initiate a new client to try again afterwards.
 6. The offline queue is not flushed anymore on a reconnect. It'll stay until node_redis gives up trying to reach the server or until you close the connection.
-7. Before this release node_redis catched user errors and threw them async back. This is not the case anymore! No user behavior of what so ever will be tracked or catched.
+7. Before this release node_redis caught user errors and threw them async back. This is not the case anymore! No user behavior of what so ever will be tracked or caught.
 8. The keyspace of `redis.server_info` (db0...) is from now on an object instead of an string.
 
 NodeRedis also thanks @qdb, @tobek, @cvibhagool, @frewsxcv, @davidbanham, @serv, @vitaliylag, @chrishamant, @GamingCoder and all other contributors that I may have missed for their contributions!
